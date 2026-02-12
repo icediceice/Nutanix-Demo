@@ -41,8 +41,9 @@ kubectl -n flux-system annotate kustomization ops-loadgen reconcile.fluxcd.io/re
 kubectl -n flux-system get gitrepository nkp-rx-demo
 kubectl -n flux-system get kustomization platform,apps,mesh,ops-loadgen,image-automation
 kubectl -n demo-ops get deploy demo-loadgen
-kubectl get cpol demo-guardrails
-kubectl get policyreports.wgpolicyk8s.io -A
+kubectl -n flux-system get helmrelease gatekeeper
+kubectl get constrainttemplates.templates.gatekeeper.sh
+kubectl get k8sdemorequiredlabels.constraints.gatekeeper.sh demo-required-labels -o jsonpath="{.status.totalViolations}"
 ```
 
 ## Safe end of session

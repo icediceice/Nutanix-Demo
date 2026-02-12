@@ -40,4 +40,4 @@ kubectl -n kommander port-forward svc/kube-prometheus-stack-grafana 3000:80
 ## Notes
 - Uses `kubectl get ... -o json` only (no writes).
 - Stop server with `Ctrl+C`.
-- If Kyverno policy report CRDs are not present, policy KPI falls back to zero values.
+- Policy KPI reads Gatekeeper constraint status (`totalViolations`).
