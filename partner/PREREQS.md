@@ -5,6 +5,7 @@
 - Flux controllers running
 - Istio + Kiali + Grafana/Loki + Jaeger available
 - Access to this repo from cluster
+- Flux `helm-controller` available (required for Gatekeeper auto-install)
 
 ## Required repo variables
 - `clusters/rx-demo/flux/gitrepository.yaml`:
