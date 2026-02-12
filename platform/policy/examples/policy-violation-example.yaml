@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: policy-violation-example
+  namespace: demo-app
+  labels:
+    app: violation-example
+spec:
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:latest
