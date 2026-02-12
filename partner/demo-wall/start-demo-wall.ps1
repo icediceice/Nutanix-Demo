@@ -37,11 +37,16 @@ function Build-StatusPayload {
   $gitRepo = Safe-KubectlJson -Args @("-n", "flux-system", "get", "gitrepository", "nkp-rx-demo", "-o", "json")
   $kustomizations = Safe-KubectlJson -Args @("-n", "flux-system", "get", "kustomizations.kustomize.toolkit.fluxcd.io", "-o", "json")
   $loadgen = Safe-KubectlJson -Args @("-n", "demo-ops", "get", "deploy", "demo-loadgen", "-o", "json")
+  $virtualService = Safe-KubectlJson -Args @("-n", "demo-app", "get", "virtualservice", "frontend", "-o", "json")
+  $policyReports = Safe-KubectlJson -Args @("-A", "get", "policyreports.wgpolicyk8s.io", "-o", "json")
+  $clusterPolicyReports = Safe-KubectlJson -Args @("-A", "get", "clusterpolicyreports.wgpolicyk8s.io", "-o", "json")
 
   $items = @()
+  $readyCount = 0
   if ($kustomizations -and $kustomizations.items) {
     foreach ($item in $kustomizations.items) {
       $ready = Get-ReadyCondition -Item $item
+      if ($ready.status -eq "True") { $readyCount += 1 }
       $items += [pscustomobject]@{
         name = "$($item.metadata.name)"
         ready = $ready.status
@@ -52,6 +57,43 @@ function Build-StatusPayload {
     }
   }
 
+  $kTotal = if ($items.Count -gt 0) { $items.Count } else { 0 }
+  $fluxSuccessRate = if ($kTotal -gt 0) { [math]::Round(($readyCount / $kTotal) * 100, 1) } else { 0.0 }
+  $fluxStatus = if ($fluxSuccessRate -ge 90) { "good" } elseif ($fluxSuccessRate -ge 70) { "warn" } else { "bad" }
+
+  $weightV1 = 0
+  $weightV2 = 0
+  if ($virtualService -and $virtualService.spec -and $virtualService.spec.http -and $virtualService.spec.http.Count -gt 0) {
+    $routes = $virtualService.spec.http[0].route
+    foreach ($r in $routes) {
+      if ($r.destination.subset -eq "v1") { $weightV1 = [int]$r.weight }
+      if ($r.destination.subset -eq "v2") { $weightV2 = [int]$r.weight }
+    }
+  }
+
+  $pass = 0
+  $warn = 0
+  $fail = 0
+  $error = 0
+  foreach ($collection in @($policyReports, $clusterPolicyReports)) {
+    if ($collection -and $collection.items) {
+      foreach ($report in $collection.items) {
+        if ($report.summary) {
+          $pass += [int]$(if ($null -ne $report.summary.pass) { $report.summary.pass } else { 0 })
+          $warn += [int]$(if ($null -ne $report.summary.warn) { $report.summary.warn } else { 0 })
+          $fail += [int]$(if ($null -ne $report.summary.fail) { $report.summary.fail } else { 0 })
+          $error += [int]$(if ($null -ne $report.summary.error) { $report.summary.error } else { 0 })
+        }
+      }
+    }
+  }
+  $policyTotal = $pass + $warn + $fail + $error
+  $policyCompliance = if ($policyTotal -gt 0) { [math]::Round(($pass / $policyTotal) * 100, 1) } else { 100.0 }
+  $policyStatus = if ($policyCompliance -ge 95) { "good" } elseif ($policyCompliance -ge 85) { "warn" } else { "bad" }
+
+  $desired = if ($loadgen -and $loadgen.spec) { [int]$loadgen.spec.replicas } else { -1 }
+  $loadProfile = if ($desired -le 0) { "off" } elseif ($desired -ge 1) { "active" } else { "unknown" }
+
   $payload = [pscustomobject]@{
     now = (Get-Date).ToString("o")
     gitRepository = [pscustomobject]@{
@@ -60,9 +102,48 @@ function Build-StatusPayload {
       ready = if ($gitRepo) { (Get-ReadyCondition -Item $gitRepo).status } else { "Unknown" }
     }
     loadgen = [pscustomobject]@{
-      desiredReplicas = if ($loadgen -and $loadgen.spec) { [int]$loadgen.spec.replicas } else { -1 }
+      desiredReplicas = $desired
       readyReplicas = if ($loadgen -and $loadgen.status -and $null -ne $loadgen.status.readyReplicas) { [int]$loadgen.status.readyReplicas } else { 0 }
+      profile = $loadProfile
     }
+    canary = [pscustomobject]@{
+      v1 = $weightV1
+      v2 = $weightV2
+    }
+    policy = [pscustomobject]@{
+      pass = $pass
+      warn = $warn
+      fail = $fail
+      error = $error
+      compliance = $policyCompliance
+      status = $policyStatus
+    }
+    kpi = @(
+      [pscustomobject]@{
+        name = "Flux Success Rate"
+        value = "$fluxSuccessRate%"
+        status = $fluxStatus
+        threshold = ">= 90%"
+      },
+      [pscustomobject]@{
+        name = "Canary Weight v2"
+        value = "$weightV2%"
+        status = "good"
+        threshold = "informational"
+      },
+      [pscustomobject]@{
+        name = "Policy Compliance"
+        value = "$policyCompliance%"
+        status = $policyStatus
+        threshold = ">= 95%"
+      },
+      [pscustomobject]@{
+        name = "Rollback SLA Target"
+        value = "< 3 minutes"
+        status = "good"
+        threshold = "target"
+      }
+    )
     kustomizations = $items
   }
 

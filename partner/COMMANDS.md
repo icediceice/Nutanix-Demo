@@ -41,6 +41,8 @@ kubectl -n flux-system annotate kustomization ops-loadgen reconcile.fluxcd.io/re
 kubectl -n flux-system get gitrepository nkp-rx-demo
 kubectl -n flux-system get kustomization platform,apps,mesh,ops-loadgen,image-automation
 kubectl -n demo-ops get deploy demo-loadgen
+kubectl get cpol demo-guardrails
+kubectl get policyreports.wgpolicyk8s.io -A
 ```
 
 ## Safe end of session
