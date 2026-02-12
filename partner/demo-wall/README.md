@@ -8,6 +8,13 @@ Read-only audience-facing visual status board for Flux + demo runtime state.
 - GitRepository Ready status
 - Kustomization readiness table
 - loadgen desired/ready replicas
+- canary weights (v1/v2)
+- policy summary (pass/warn/fail/error)
+- KPI cards:
+  - Flux Success Rate
+  - Canary Weight v2
+  - Policy Compliance
+  - Rollback SLA Target
 
 ## Start it
 ```powershell
@@ -33,3 +40,4 @@ kubectl -n kommander port-forward svc/kube-prometheus-stack-grafana 3000:80
 ## Notes
 - Uses `kubectl get ... -o json` only (no writes).
 - Stop server with `Ctrl+C`.
+- If Kyverno policy report CRDs are not present, policy KPI falls back to zero values.
