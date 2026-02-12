@@ -80,6 +80,8 @@ def create_app(service_name: str) -> Flask:
             "status_code": resp.status_code,
             "duration_ms": round(duration * 1000.0, 2),
         })
+        resp.headers["X-Trace-Id"] = trace_id
+        resp.headers["X-Span-Id"] = span_id
         return resp
 
     @app.route("/metrics", methods=["GET"])
@@ -131,6 +133,178 @@ def create_app(service_name: str) -> Flask:
 
         @app.route("/", methods=["GET"])
         def index():
+            version = os.getenv("SERVICE_VERSION", "unknown")
+            html = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nutanix Demo Storefront</title>
+  <style>
+    :root {{
+      --bg-1: #e8f3ff;
+      --bg-2: #f8fbff;
+      --ink: #102136;
+      --card: #ffffff;
+      --line: #d6e4f5;
+      --accent: #0071ce;
+      --accent-2: #00a86b;
+      --danger: #bf2f36;
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }}
+    .wrap {{ max-width: 960px; margin: 32px auto; padding: 0 16px; }}
+    .hero {{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }}
+    .title {{ margin: 0 0 8px; font-size: 1.5rem; }}
+    .muted {{ color: #4f647b; margin: 0; }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }}
+    .card {{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }}
+    .name {{ margin: 0; font-size: 1rem; }}
+    .price {{ margin: 8px 0 0; font-weight: 700; }}
+    .actions {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 14px 0 0;
+    }}
+    button {{
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      background: var(--accent);
+      font-weight: 700;
+      cursor: pointer;
+    }}
+    button.secondary {{ background: #516d8c; }}
+    .pill {{
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: .85rem;
+    }}
+    .status {{
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: .95rem;
+      white-space: pre-wrap;
+    }}
+    .ok {{ color: var(--accent-2); }}
+    .bad {{ color: var(--danger); }}
+    code {{ background: #eef5ff; padding: 2px 5px; border-radius: 5px; }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1 class="title">Nutanix Demo Storefront</h1>
+      <p class="muted">Friendly demo UI for canary, incident, and observability walkthroughs.</p>
+      <div class="actions">
+        <span class="pill">Frontend version: <strong>{version}</strong></span>
+        <span class="pill">Path: <code>/checkout</code></span>
+      </div>
+    </section>
+
+    <div id="items" class="grid"></div>
+
+    <section class="hero">
+      <div class="actions">
+        <button id="buy">Run Demo Checkout</button>
+        <button id="refresh" class="secondary">Reload Catalog</button>
+      </div>
+      <div id="status" class="status">Ready.</div>
+    </section>
+  </div>
+
+  <script>
+    const itemsEl = document.getElementById("items");
+    const statusEl = document.getElementById("status");
+
+    function setStatus(text, ok=true) {{
+      statusEl.textContent = text;
+      statusEl.className = "status " + (ok ? "ok" : "bad");
+    }}
+
+    async function loadCatalog() {{
+      try {{
+        const resp = await fetch("/catalog", {{ method: "GET" }});
+        const items = await resp.json();
+        itemsEl.innerHTML = "";
+        items.forEach((it) => {{
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `<h3 class="name">${{it.name}}</h3><p class="muted">SKU: ${{it.id}}</p><p class="price">$${{it.price}}</p>`;
+          itemsEl.appendChild(card);
+        }});
+        setStatus("Catalog loaded. Click 'Run Demo Checkout' to generate live traffic.");
+      }} catch (err) {{
+        setStatus("Catalog load failed: " + err, false);
+      }}
+    }}
+
+    async function checkout() {{
+      const orderId = "order-" + Date.now();
+      try {{
+        const resp = await fetch("/checkout", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ order_id: orderId, user: "demo-user" }})
+        }});
+        const body = await resp.json();
+        const traceId = resp.headers.get("X-Trace-Id") || "n/a";
+        const ok = resp.ok;
+        setStatus(
+          `order_id=${{orderId}}\\nstatus=${{resp.status}}\\ntrace_id=${{traceId}}\\nresult=${{JSON.stringify(body)}}`,
+          ok
+        );
+      }} catch (err) {{
+        setStatus("Checkout failed: " + err, false);
+      }}
+    }}
+
+    document.getElementById("buy").addEventListener("click", checkout);
+    document.getElementById("refresh").addEventListener("click", loadCatalog);
+    loadCatalog();
+  </script>
+</body>
+</html>
+"""
+            return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+        @app.route("/catalog", methods=["GET"])
+        def frontend_catalog():
+            resp = requests.get(f"{catalog_url}/items", timeout=5)
+            return jsonify(resp.json()), resp.status_code
+
+        @app.route("/api/info", methods=["GET"])
+        def frontend_info():
             return jsonify({"service": "frontend", "version": os.getenv("SERVICE_VERSION", "unknown"), "status": "ok"})
 
         @app.route("/checkout", methods=["POST"])
