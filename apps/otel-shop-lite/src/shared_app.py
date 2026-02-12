@@ -134,41 +134,66 @@ def create_app(service_name: str) -> Flask:
         @app.route("/", methods=["GET"])
         def index():
             version = os.getenv("SERVICE_VERSION", "unknown")
+            is_v2 = version.startswith("v2")
+            title = "Nutanix Storefront v2 (Canary Candidate)" if is_v2 else "Nutanix Storefront v1 (Stable)"
+            subtitle = (
+                "Next-gen experience. This look should increase as canary traffic shifts to v2."
+                if is_v2
+                else "Stable experience. This look should dominate when traffic stays on v1."
+            )
+            body_class = "v2" if is_v2 else "v1"
             html = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nutanix Demo Storefront</title>
+  <title>{title}</title>
   <style>
     :root {{
-      --bg-1: #e8f3ff;
-      --bg-2: #f8fbff;
-      --ink: #102136;
-      --card: #ffffff;
-      --line: #d6e4f5;
-      --accent: #0071ce;
-      --accent-2: #00a86b;
-      --danger: #bf2f36;
+      --v1-bg-1: #e8f3ff;
+      --v1-bg-2: #f8fbff;
+      --v1-ink: #102136;
+      --v1-card: #ffffff;
+      --v1-line: #d6e4f5;
+      --v1-accent: #0071ce;
+      --v1-good: #00a86b;
+
+      --v2-bg-1: #0d1117;
+      --v2-bg-2: #111a2a;
+      --v2-ink: #f5f8ff;
+      --v2-card: #1a2638;
+      --v2-line: #32435d;
+      --v2-accent: #ff7a18;
+      --v2-good: #2dc9a0;
+
+      --danger: #d94b53;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "Segoe UI", Tahoma, sans-serif;
-      color: var(--ink);
-      background: linear-gradient(160deg, var(--bg-1), var(--bg-2));
       min-height: 100vh;
+    }}
+    body.v1 {{
+      color: var(--v1-ink);
+      background: linear-gradient(160deg, var(--v1-bg-1), var(--v1-bg-2));
+    }}
+    body.v2 {{
+      color: var(--v2-ink);
+      background: radial-gradient(circle at top left, #1b2940, var(--v2-bg-1) 55%);
     }}
     .wrap {{ max-width: 960px; margin: 32px auto; padding: 0 16px; }}
     .hero {{
-      background: var(--card);
-      border: 1px solid var(--line);
       border-radius: 14px;
       padding: 18px;
       margin-bottom: 16px;
     }}
+    body.v1 .hero {{ background: var(--v1-card); border: 1px solid var(--v1-line); }}
+    body.v2 .hero {{ background: var(--v2-card); border: 1px solid var(--v2-line); box-shadow: 0 10px 30px rgba(0,0,0,.25); }}
     .title {{ margin: 0 0 8px; font-size: 1.5rem; }}
-    .muted {{ color: #4f647b; margin: 0; }}
+    .muted {{ margin: 0; }}
+    body.v1 .muted {{ color: #4f647b; }}
+    body.v2 .muted {{ color: #b8cae8; }}
     .grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -176,11 +201,11 @@ def create_app(service_name: str) -> Flask:
       margin: 16px 0;
     }}
     .card {{
-      background: var(--card);
-      border: 1px solid var(--line);
       border-radius: 12px;
       padding: 12px;
     }}
+    body.v1 .card {{ background: var(--v1-card); border: 1px solid var(--v1-line); }}
+    body.v2 .card {{ background: #142033; border: 1px solid #2a3d5d; }}
     .name {{ margin: 0; font-size: 1rem; }}
     .price {{ margin: 8px 0 0; font-weight: 700; }}
     .actions {{
@@ -195,39 +220,44 @@ def create_app(service_name: str) -> Flask:
       border-radius: 10px;
       padding: 10px 14px;
       color: #fff;
-      background: var(--accent);
       font-weight: 700;
       cursor: pointer;
     }}
-    button.secondary {{ background: #516d8c; }}
+    body.v1 button {{ background: var(--v1-accent); }}
+    body.v2 button {{ background: var(--v2-accent); }}
+    button.secondary {{ background: #516d8c !important; }}
     .pill {{
-      border: 1px solid var(--line);
-      background: #fff;
       border-radius: 999px;
       padding: 6px 10px;
       font-size: .85rem;
     }}
+    body.v1 .pill {{ border: 1px solid var(--v1-line); background: #fff; }}
+    body.v2 .pill {{ border: 1px solid #3d5578; background: #101a2b; color: #d8e6ff; }}
     .status {{
       margin-top: 12px;
       padding: 10px;
       border-radius: 10px;
-      background: #fff;
-      border: 1px solid var(--line);
       font-size: .95rem;
       white-space: pre-wrap;
     }}
-    .ok {{ color: var(--accent-2); }}
+    body.v1 .status {{ background: #fff; border: 1px solid var(--v1-line); }}
+    body.v2 .status {{ background: #0f1727; border: 1px solid #324768; }}
+    body.v1 .ok {{ color: var(--v1-good); }}
+    body.v2 .ok {{ color: var(--v2-good); }}
     .bad {{ color: var(--danger); }}
-    code {{ background: #eef5ff; padding: 2px 5px; border-radius: 5px; }}
+    code {{ padding: 2px 5px; border-radius: 5px; }}
+    body.v1 code {{ background: #eef5ff; }}
+    body.v2 code {{ background: #1f2e47; color: #dce9ff; }}
   </style>
 </head>
-<body>
+<body class="{body_class}">
   <div class="wrap">
     <section class="hero">
-      <h1 class="title">Nutanix Demo Storefront</h1>
-      <p class="muted">Friendly demo UI for canary, incident, and observability walkthroughs.</p>
+      <h1 class="title">{title}</h1>
+      <p class="muted">{subtitle}</p>
       <div class="actions">
         <span class="pill">Frontend version: <strong>{version}</strong></span>
+        <span class="pill">Canary hint: watch this style shift during rollout</span>
         <span class="pill">Path: <code>/checkout</code></span>
       </div>
     </section>
@@ -279,9 +309,10 @@ def create_app(service_name: str) -> Flask:
         }});
         const body = await resp.json();
         const traceId = resp.headers.get("X-Trace-Id") || "n/a";
+        const frontendVersion = resp.headers.get("X-Frontend-Version") || "{version}";
         const ok = resp.ok;
         setStatus(
-          `order_id=${{orderId}}\\nstatus=${{resp.status}}\\ntrace_id=${{traceId}}\\nresult=${{JSON.stringify(body)}}`,
+          `order_id=${{orderId}}\\nfrontend_version=${{frontendVersion}}\\nstatus=${{resp.status}}\\ntrace_id=${{traceId}}\\nresult=${{JSON.stringify(body)}}`,
           ok
         );
       }} catch (err) {{
@@ -296,7 +327,10 @@ def create_app(service_name: str) -> Flask:
 </body>
 </html>
 """
-            return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+            return html, 200, {
+                "Content-Type": "text/html; charset=utf-8",
+                "X-Frontend-Version": version,
+            }
 
         @app.route("/catalog", methods=["GET"])
         def frontend_catalog():
@@ -313,7 +347,12 @@ def create_app(service_name: str) -> Flask:
             payload = request.get_json(silent=True) or {}
             payload["items"] = items
             resp = requests.post(f"{checkout_url}/checkout", json=payload, timeout=5)
-            return jsonify({"items": items, "result": resp.json()}), resp.status_code
+            frontend_version = os.getenv("SERVICE_VERSION", "unknown")
+            return (
+                jsonify({"items": items, "result": resp.json(), "frontend_version": frontend_version}),
+                resp.status_code,
+                {"X-Frontend-Version": frontend_version},
+            )
 
     return app
 
