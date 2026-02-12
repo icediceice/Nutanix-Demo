@@ -3,6 +3,7 @@
 This demo is branch-driven. No YAML edits are required during the session.
 Use `partner/COMMANDS.md` for copy/paste commands.
 For audience visualization, run `partner/demo-wall/start-demo-wall.ps1`.
+KPI/policy defaults are defined in `WOW.md`.
 
 ## 1) One-time setup
 1. Update `clusters/rx-demo/flux/gitrepository.yaml` with your repo URL/branch.
