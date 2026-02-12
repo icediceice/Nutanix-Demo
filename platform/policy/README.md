@@ -1,15 +1,16 @@
 # Demo Policy Gate
 
-Kyverno audit-only policy bundle for demo namespaces.
+Gatekeeper dry-run policy bundle for demo namespaces.
 
 ## Included
 - `demo-guardrails.yaml` with:
-  - required `app` + `version` labels
-  - required requests/limits
-  - disallow `:latest` image tags
+  - `K8sDemoRequiredLabels` (`app` + `version`)
+  - `K8sDemoRequiredResources` (requests/limits)
+  - `K8sDemoNoLatest` (blocks `:latest` in dry-run)
 
 ## Safety mode
-- `validationFailureAction: Audit` to avoid blocking live demos.
+- `enforcementAction: dryrun` on all constraints to avoid blocking live demos.
+- Gatekeeper is auto-installed from `platform/gatekeeper` by Flux.
 
 ## Optional violation sample
 - `examples/policy-violation-example.yaml`
