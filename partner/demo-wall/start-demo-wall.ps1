@@ -38,8 +38,9 @@ function Build-StatusPayload {
   $kustomizations = Safe-KubectlJson -Args @("-n", "flux-system", "get", "kustomizations.kustomize.toolkit.fluxcd.io", "-o", "json")
   $loadgen = Safe-KubectlJson -Args @("-n", "demo-ops", "get", "deploy", "demo-loadgen", "-o", "json")
   $virtualService = Safe-KubectlJson -Args @("-n", "demo-app", "get", "virtualservice", "frontend", "-o", "json")
-  $policyReports = Safe-KubectlJson -Args @("-A", "get", "policyreports.wgpolicyk8s.io", "-o", "json")
-  $clusterPolicyReports = Safe-KubectlJson -Args @("-A", "get", "clusterpolicyreports.wgpolicyk8s.io", "-o", "json")
+  $gkLabels = Safe-KubectlJson -Args @("get", "k8sdemorequiredlabels.constraints.gatekeeper.sh", "demo-required-labels", "-o", "json")
+  $gkResources = Safe-KubectlJson -Args @("get", "k8sdemorequiredresources.constraints.gatekeeper.sh", "demo-required-resources", "-o", "json")
+  $gkNoLatest = Safe-KubectlJson -Args @("get", "k8sdemonolatest.constraints.gatekeeper.sh", "demo-no-latest", "-o", "json")
 
   $items = @()
   $readyCount = 0
@@ -71,25 +72,24 @@ function Build-StatusPayload {
     }
   }
 
+  $constraints = @($gkLabels, $gkResources, $gkNoLatest)
   $pass = 0
   $warn = 0
   $fail = 0
   $error = 0
-  foreach ($collection in @($policyReports, $clusterPolicyReports)) {
-    if ($collection -and $collection.items) {
-      foreach ($report in $collection.items) {
-        if ($report.summary) {
-          $pass += [int]$(if ($null -ne $report.summary.pass) { $report.summary.pass } else { 0 })
-          $warn += [int]$(if ($null -ne $report.summary.warn) { $report.summary.warn } else { 0 })
-          $fail += [int]$(if ($null -ne $report.summary.fail) { $report.summary.fail } else { 0 })
-          $error += [int]$(if ($null -ne $report.summary.error) { $report.summary.error } else { 0 })
-        }
-      }
+  $policyTotal = 0
+  foreach ($c in $constraints) {
+    if (-not $c) { continue }
+    $policyTotal += 1
+    $violations = [int]$(if ($c.status -and $null -ne $c.status.totalViolations) { $c.status.totalViolations } else { 0 })
+    if ($violations -gt 0) {
+      $warn += $violations
+    } else {
+      $pass += 1
     }
   }
-  $policyTotal = $pass + $warn + $fail + $error
   $policyCompliance = if ($policyTotal -gt 0) { [math]::Round(($pass / $policyTotal) * 100, 1) } else { 100.0 }
-  $policyStatus = if ($policyCompliance -ge 95) { "good" } elseif ($policyCompliance -ge 85) { "warn" } else { "bad" }
+  $policyStatus = if ($policyCompliance -ge 95) { "good" } elseif ($policyCompliance -ge 60) { "warn" } else { "bad" }
 
   $desired = if ($loadgen -and $loadgen.spec) { [int]$loadgen.spec.replicas } else { -1 }
   $loadProfile = if ($desired -le 0) { "off" } elseif ($desired -ge 1) { "active" } else { "unknown" }
