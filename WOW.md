@@ -32,8 +32,8 @@ Boost audience impact by adding executive KPI visibility and governance proof wi
       - good: "target met during demo drill"
 
 ## Policy Gate
-- engine: Kyverno
-- mode: Audit (non-blocking for demos)
+- engine: Gatekeeper
+- mode: dryrun (non-blocking for demos)
 - rules:
   - name: require-standard-labels
     scope: demo-app,demo-ops

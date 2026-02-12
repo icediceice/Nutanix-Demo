@@ -5,4 +5,5 @@ resources:
   - rbac
   - quotas-limits
   - istio-namespace-labels
+  - gatekeeper
   - policy

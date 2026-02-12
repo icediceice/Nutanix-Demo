@@ -1,65 +1,134 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
 metadata:
-  name: demo-guardrails
+  name: k8sdemorequiredlabels
 spec:
-  validationFailureAction: Audit
-  background: true
-  rules:
-    - name: require-standard-labels
-      match:
-        any:
-          - resources:
-              namespaces:
-                - demo-app
-                - demo-ops
-              kinds:
-                - Pod
-                - Deployment
-      validate:
-        message: "Resources must include app and version labels."
-        pattern:
-          metadata:
-            labels:
-              app: "?*"
-              version: "?*"
-    - name: require-requests-limits
-      match:
-        any:
-          - resources:
-              namespaces:
-                - demo-app
-                - demo-ops
-              kinds:
-                - Pod
-      validate:
-        message: "Containers must define CPU/memory requests and limits."
-        foreach:
-          - list: "request.object.spec.containers"
-            pattern:
-              resources:
-                requests:
-                  cpu: "?*"
-                  memory: "?*"
-                limits:
-                  cpu: "?*"
-                  memory: "?*"
-    - name: disallow-latest-tag
-      match:
-        any:
-          - resources:
-              namespaces:
-                - demo-app
-                - demo-ops
-              kinds:
-                - Pod
-      validate:
-        message: "Images using ':latest' are not allowed in demo namespaces."
-        foreach:
-          - list: "request.object.spec.containers"
-            deny:
-              conditions:
-                any:
-                  - key: "{{ element.image }}"
-                    operator: EndsWith
-                    value: ":latest"
+  crd:
+    spec:
+      names:
+        kind: K8sDemoRequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemorequiredlabels
+
+        violation[{"msg": msg}] {
+          not input.review.object.metadata.labels.app
+          msg := "label 'app' is required"
+        }
+
+        violation[{"msg": msg}] {
+          not input.review.object.metadata.labels.version
+          msg := "label 'version' is required"
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoRequiredLabels
+metadata:
+  name: demo-required-labels
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdemorequiredresources
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDemoRequiredResources
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemorequiredresources
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.requests.cpu
+          msg := sprintf("container %v missing requests.cpu", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.requests.memory
+          msg := sprintf("container %v missing requests.memory", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.limits.cpu
+          msg := sprintf("container %v missing limits.cpu", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.limits.memory
+          msg := sprintf("container %v missing limits.memory", [c.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoRequiredResources
+metadata:
+  name: demo-required-resources
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdemonolatest
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDemoNoLatest
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemonolatest
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          endswith(c.image, ":latest")
+          msg := sprintf("container %v uses disallowed :latest tag", [c.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoNoLatest
+metadata:
+  name: demo-no-latest
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
