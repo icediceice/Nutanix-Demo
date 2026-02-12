@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-mock-v2
+  namespace: demo-app
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          env:
+            - name: FAIL_MODE
+              value: latency
+            - name: LATENCY_MS
+              value: "1000"
+            - name: ERROR_RATE
+              value: "0"

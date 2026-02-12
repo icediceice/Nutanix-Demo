@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-loadgen
+  namespace: demo-ops
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: k6
+          env:
+            - name: SCENARIO
+              value: baseline
+            - name: VUS
+              value: "5"
+            - name: DURATION
+              value: 30m

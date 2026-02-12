@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-loadgen
+  namespace: demo-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-loadgen
+  template:
+    metadata:
+      labels:
+        app: demo-loadgen
+    spec:
+      containers:
+        - name: k6
+          image: grafana/k6:0.54.0
+          args: ["run", "/scripts/script.js"]
+          env:
+            - name: TARGET_URL
+              value: http://frontend.demo-app.svc.cluster.local
+            - name: SCENARIO
+              value: baseline
+            - name: VUS
+              value: "5"
+            - name: DURATION
+              value: 10m
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+      volumes:
+        - name: script
+          configMap:
+            name: k6-script

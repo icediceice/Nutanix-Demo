@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/your-org/otel-shop-lite-frontend:v2 # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: frontend
+            - name: SERVICE_VERSION
+              value: v2
+            - name: CATALOG_URL
+              value: http://catalog-api.demo-app.svc.cluster.local
+            - name: CHECKOUT_URL
+              value: http://checkout-api.demo-app.svc.cluster.local
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_SERVICE_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-api-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-api
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: catalog-api
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/your-org/otel-shop-lite-catalog-api:v2 # {"$imagepolicy": "flux-system:otel-shop-catalog-api-policy"}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: catalog-api
+            - name: SERVICE_VERSION
+              value: v2
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_SERVICE_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-api-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout-api
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: checkout-api
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/your-org/otel-shop-lite-checkout-api:v2 # {"$imagepolicy": "flux-system:otel-shop-checkout-api-policy"}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: checkout-api
+            - name: SERVICE_VERSION
+              value: v2
+            - name: PAYMENT_URL
+              value: http://payment-mock.demo-app.svc.cluster.local
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_SERVICE_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-mock-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-mock
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: payment-mock
+        version: v2
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/your-org/otel-shop-lite-payment-mock:v2 # {"$imagepolicy": "flux-system:otel-shop-payment-mock-policy"}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: payment-mock
+            - name: SERVICE_VERSION
+              value: v2
+            - name: FAIL_MODE
+              value: ok
+            - name: LATENCY_MS
+              value: "0"
+            - name: ERROR_RATE
+              value: "0"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_EXPORTER_OTLP_ENDPOINT
+            - name: OTEL_SERVICE_NAMESPACE
+              valueFrom:
+                configMapKeyRef:
+                  name: otel-shop-config
+                  key: OTEL_SERVICE_NAMESPACE
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 384Mi

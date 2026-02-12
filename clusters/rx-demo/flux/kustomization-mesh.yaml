@@ -1,0 +1,16 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: mesh
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  path: ./mesh
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: nkp-rx-demo
+  dependsOn:
+    - name: apps
+  wait: true
+  timeout: 2m0s

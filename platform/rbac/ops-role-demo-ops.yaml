@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: demo-ops-role
+  namespace: demo-ops
+rules:
+  - apiGroups: ["", "apps", "batch"]
+    resources: ["pods", "services", "configmaps", "deployments", "jobs", "events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

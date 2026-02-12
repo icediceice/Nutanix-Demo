@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: demo-dev-role
+  namespace: demo-app
+rules:
+  - apiGroups: ["", "apps", "networking.istio.io"]
+    resources: ["pods", "services", "configmaps", "deployments", "virtualservices", "destinationrules"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]

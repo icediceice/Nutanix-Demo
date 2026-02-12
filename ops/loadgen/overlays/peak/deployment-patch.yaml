@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-loadgen
+  namespace: demo-ops
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: k6
+          env:
+            - name: SCENARIO
+              value: peak
+            - name: VUS
+              value: "20"
+            - name: DURATION
+              value: 30m
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 600m
+              memory: 768Mi

@@ -1,0 +1,41 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: demo-devs-binding
+  namespace: demo-app
+subjects:
+  - kind: Group
+    name: demo-devs
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: demo-dev-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: demo-ops-binding-demo-app
+  namespace: demo-app
+subjects:
+  - kind: Group
+    name: demo-ops
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: demo-ops-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: demo-ops-binding-demo-ops
+  namespace: demo-ops
+subjects:
+  - kind: Group
+    name: demo-ops
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: demo-ops-role
+  apiGroup: rbac.authorization.k8s.io

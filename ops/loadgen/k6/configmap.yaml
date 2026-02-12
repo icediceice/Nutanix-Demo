@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-script
+data:
+  script.js: |
+    import http from "k6/http";
+    import { check, sleep } from "k6";
+
+    export const options = {
+      vus: Number(__ENV.VUS || 5),
+      duration: __ENV.DURATION || "10m",
+      noConnectionReuse: false,
+      thresholds: {
+        http_req_failed: ["rate<0.2"],
+        http_req_duration: ["p(95)<1500"],
+      },
+    };
+
+    const target = __ENV.TARGET_URL || "http://frontend.demo-app.svc.cluster.local";
+    const scenario = __ENV.SCENARIO || "baseline";
+
+    export default function () {
+      const headers = {
+        "X-Demo-Scenario": scenario,
+        "User-Agent": "nkp-demo-loadgen",
+        "Content-Type": "application/json",
+      };
+
+      const home = http.get(`${target}/`, { headers });
+      check(home, { "home status is 200": (r) => r.status === 200 });
+
+      const payload = JSON.stringify({ order_id: `order-${__VU}-${__ITER}` });
+      const checkout = http.post(`${target}/checkout`, payload, { headers });
+      check(checkout, { "checkout responded": (r) => r.status >= 200 && r.status < 600 });
+
+      sleep(1);
+    }

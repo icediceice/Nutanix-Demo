@@ -1,0 +1,59 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: otel-shop-frontend-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: otel-shop-frontend
+  filterTags:
+    pattern: "^v(?P<version>[0-9]+)$"
+    extract: "$version"
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: otel-shop-catalog-api-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: otel-shop-catalog-api
+  filterTags:
+    pattern: "^v(?P<version>[0-9]+)$"
+    extract: "$version"
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: otel-shop-checkout-api-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: otel-shop-checkout-api
+  filterTags:
+    pattern: "^v(?P<version>[0-9]+)$"
+    extract: "$version"
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: otel-shop-payment-mock-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: otel-shop-payment-mock
+  filterTags:
+    pattern: "^v(?P<version>[0-9]+)$"
+    extract: "$version"
+  policy:
+    numerical:
+      order: asc

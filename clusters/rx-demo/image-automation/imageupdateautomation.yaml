@@ -1,0 +1,24 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: otel-shop-v2-images
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  sourceRef:
+    kind: GitRepository
+    name: nkp-rx-demo
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: "chore(images): update otel-shop-lite v2 images"
+    push:
+      branch: main
+  update:
+    path: ./apps/otel-shop-lite/versions/v2
+    strategy: Setters
