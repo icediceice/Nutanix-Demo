@@ -1,0 +1,65 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: demo-guardrails
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-standard-labels
+      match:
+        any:
+          - resources:
+              namespaces:
+                - demo-app
+                - demo-ops
+              kinds:
+                - Pod
+                - Deployment
+      validate:
+        message: "Resources must include app and version labels."
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
+              version: "?*"
+    - name: require-requests-limits
+      match:
+        any:
+          - resources:
+              namespaces:
+                - demo-app
+                - demo-ops
+              kinds:
+                - Pod
+      validate:
+        message: "Containers must define CPU/memory requests and limits."
+        foreach:
+          - list: "request.object.spec.containers"
+            pattern:
+              resources:
+                requests:
+                  cpu: "?*"
+                  memory: "?*"
+                limits:
+                  cpu: "?*"
+                  memory: "?*"
+    - name: disallow-latest-tag
+      match:
+        any:
+          - resources:
+              namespaces:
+                - demo-app
+                - demo-ops
+              kinds:
+                - Pod
+      validate:
+        message: "Images using ':latest' are not allowed in demo namespaces."
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.image }}"
+                    operator: EndsWith
+                    value: ":latest"
