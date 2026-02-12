@@ -142,6 +142,7 @@ def create_app(service_name: str) -> Flask:
                 else "Stable experience. This look should dominate when traffic stays on v1."
             )
             body_class = "v2" if is_v2 else "v1"
+            version_wall = "LIVE VERSION: v2 CANDIDATE" if is_v2 else "LIVE VERSION: v1 STABLE"
             html = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -183,6 +184,34 @@ def create_app(service_name: str) -> Flask:
       background: radial-gradient(circle at top left, #1b2940, var(--v2-bg-1) 55%);
     }}
     .wrap {{ max-width: 960px; margin: 32px auto; padding: 0 16px; }}
+    .version-wall {{
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      text-align: center;
+      font-weight: 900;
+      font-size: clamp(1.1rem, 2.8vw, 2rem);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      animation: pulse 1.8s ease-in-out infinite;
+    }}
+    @keyframes pulse {{
+      0% {{ transform: scale(1); }}
+      50% {{ transform: scale(1.015); }}
+      100% {{ transform: scale(1); }}
+    }}
+    body.v1 .version-wall {{
+      color: #01345f;
+      background: linear-gradient(90deg, #d9eeff, #ecf6ff);
+      border: 2px solid #85c6ff;
+      box-shadow: 0 8px 20px rgba(0, 80, 150, .15);
+    }}
+    body.v2 .version-wall {{
+      color: #fff2e8;
+      background: linear-gradient(90deg, #ff7a18, #ffb86b);
+      border: 2px solid #ffd4af;
+      box-shadow: 0 12px 24px rgba(255, 122, 24, .35);
+    }}
     .hero {{
       border-radius: 14px;
       padding: 18px;
@@ -252,6 +281,7 @@ def create_app(service_name: str) -> Flask:
 </head>
 <body class="{body_class}">
   <div class="wrap">
+    <section class="version-wall">{version_wall}</section>
     <section class="hero">
       <h1 class="title">{title}</h1>
       <p class="muted">{subtitle}</p>
