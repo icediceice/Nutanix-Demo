@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/your-org/otel-shop-lite-frontend:v2 # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
+          image: ghcr.io/icediceice/otel-shop-lite-frontend:v2 # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -65,7 +65,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/your-org/otel-shop-lite-catalog-api:v2 # {"$imagepolicy": "flux-system:otel-shop-catalog-api-policy"}
+          image: ghcr.io/icediceice/otel-shop-lite-catalog-api:v2 # {"$imagepolicy": "flux-system:otel-shop-catalog-api-policy"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -110,7 +110,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/your-org/otel-shop-lite-checkout-api:v2 # {"$imagepolicy": "flux-system:otel-shop-checkout-api-policy"}
+          image: ghcr.io/icediceice/otel-shop-lite-checkout-api:v2 # {"$imagepolicy": "flux-system:otel-shop-checkout-api-policy"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -157,7 +157,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/your-org/otel-shop-lite-payment-mock:v2 # {"$imagepolicy": "flux-system:otel-shop-payment-mock-policy"}
+          image: ghcr.io/icediceice/otel-shop-lite-payment-mock:v2 # {"$imagepolicy": "flux-system:otel-shop-payment-mock-policy"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
