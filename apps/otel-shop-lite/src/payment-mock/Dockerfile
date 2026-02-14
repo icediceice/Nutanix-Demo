@@ -3,6 +3,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY shared_app.py ./
+COPY services ./services
 COPY payment-mock/app.py ./app.py
 EXPOSE 8080
 CMD ["python", "app.py"]
