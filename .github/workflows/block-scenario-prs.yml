@@ -1,0 +1,17 @@
+name: Block scenario/* -> main PRs
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  block:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if PR head is scenario/*
+        if: startsWith(github.head_ref, 'scenario/')
+        run: |
+          echo "This repo uses scenario/* branches as runtime states, not feature branches."
+          echo "Do not open/merge PRs from scenario/* into main."
+          echo "If you need to update the demo, change main and then merge main into scenario/*."
+          exit 1
