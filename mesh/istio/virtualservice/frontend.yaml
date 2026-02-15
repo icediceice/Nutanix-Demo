@@ -6,6 +6,8 @@ metadata:
 spec:
   hosts:
     - frontend.demo-app.svc.cluster.local
+  gateways:
+    - mesh
   http:
     - route:
         - destination:

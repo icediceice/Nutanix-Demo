@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: frontend-gateway
+  namespace: demo-app
+spec:
+  # Use the Kommander-installed Istio ingress gateway on workload clusters.
+  selector:
+    istio: istio-helm-ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
