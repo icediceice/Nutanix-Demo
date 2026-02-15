@@ -1,12 +1,10 @@
 # ArgoCD Quickstart (NKP Rx Demo)
 
-This repo supports two GitOps modes:
-- Flux (original): `clusters/rx-demo/flux`
-- ArgoCD (status-first): `clusters/rx-demo/argocd`
+This demo uses ArgoCD (recommended) for deployment and operator-visible status.
 
 ## Preconditions
 - You are deploying to a Kommander-managed workload cluster.
-- Do not run the demo via Flux and ArgoCD at the same time on the same cluster.
+- Do not run a separate GitOps controller to manage the same demo namespaces/resources.
 
 ## Install ArgoCD
 ```bash
