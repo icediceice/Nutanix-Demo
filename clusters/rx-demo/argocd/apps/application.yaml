@@ -19,3 +19,5 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - PruneLast=true
+      # Allows first-sync on clusters where CRDs are installed asynchronously (e.g., Gatekeeper templates creating constraint CRDs).
+      - SkipDryRunOnMissingResource=true
