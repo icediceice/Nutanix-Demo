@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - gateway
   - destinationrule
-  - overlays/weight-0
+  - overlays/weight-10
