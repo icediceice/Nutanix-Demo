@@ -3,3 +3,6 @@ kind: Kustomization
 namespace: demo-app
 resources:
   - frontend.yaml
+  - catalog-api.yaml
+  - checkout-api.yaml
+  - payment-mock.yaml
