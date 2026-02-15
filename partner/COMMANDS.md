@@ -1,17 +1,25 @@
-# Partner Command Sheet
+# Partner Command Sheet (ArgoCD)
 
 Use this for operator copy/paste during demos.
 
 ## Prereqs
-- `kubectl` is configured to the target cluster.
-- Flux is installed in namespace `flux-system`.
+- `kubectl` points to the target workload cluster.
+- ArgoCD installed (`argocd` namespace).
 
-## Set repo URL + starting branch
-```powershell
-kubectl -n flux-system patch gitrepository nkp-rx-demo --type merge -p "{\"spec\":{\"url\":\"https://github.com/icediceice/Nutanix-Demo.git\",\"ref\":{\"branch\":\"scenario/baseline\"}}}"
+## Check status (primary)
+```bash
+kubectl -n argocd get application rx-demo -o wide
+kubectl -n demo-ops get deploy demo-loadgen
+kubectl -n demo-ops get svc demo-wall -o wide
 ```
 
-## Switch scenario branch (single command)
+## ArgoCD UI access
+```bash
+kubectl -n argocd get svc argocd-server -o wide
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
+```
+
+## Switch scenario branch (ArgoCD)
 Replace `<branch>` with one of:
 - `scenario/baseline`
 - `scenario/load-off`
@@ -23,30 +31,25 @@ Replace `<branch>` with one of:
 - `scenario/incident-error`
 - `scenario/mirror-v2`
 
-```powershell
-kubectl -n flux-system patch gitrepository nkp-rx-demo --type merge -p "{\"spec\":{\"ref\":{\"branch\":\"<branch>\"}}}"
+```bash
+kubectl -n argocd patch application rx-demo --type merge \
+  -p "{\"spec\":{\"source\":{\"targetRevision\":\"<branch>\"}}}"
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+kubectl -n argocd get application rx-demo -o wide
 ```
 
-## Reconcile now (optional, speeds demo)
-```powershell
-kubectl -n flux-system annotate gitrepository nkp-rx-demo reconcile.fluxcd.io/requestedAt=\"$(Get-Date -Format o)\" --overwrite
-kubectl -n flux-system annotate kustomization platform reconcile.fluxcd.io/requestedAt=\"$(Get-Date -Format o)\" --overwrite
-kubectl -n flux-system annotate kustomization apps reconcile.fluxcd.io/requestedAt=\"$(Get-Date -Format o)\" --overwrite
-kubectl -n flux-system annotate kustomization mesh reconcile.fluxcd.io/requestedAt=\"$(Get-Date -Format o)\" --overwrite
-kubectl -n flux-system annotate kustomization ops-loadgen reconcile.fluxcd.io/requestedAt=\"$(Get-Date -Format o)\" --overwrite
+## Demo app access (external)
+```bash
+kubectl -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
+```
+Open: `http://<ISTIO_INGRESS_LB_IP>/`
+
+## Fallback port-forwards
+```bash
+kubectl -n demo-app port-forward svc/frontend 8080:80
+kubectl -n demo-ops port-forward svc/demo-wall 9090:80
+kubectl -n argocd port-forward svc/argocd-server 8081:443
 ```
 
-## Readiness checks
-```powershell
-kubectl -n flux-system get gitrepository nkp-rx-demo
-kubectl -n flux-system get kustomization platform,apps,mesh,ops-loadgen,image-automation
-kubectl -n demo-ops get deploy demo-loadgen
-kubectl -n demo-app get secret ghcr-pull
-kubectl get constrainttemplates.templates.gatekeeper.sh
-kubectl get k8sdemorequiredlabels.constraints.gatekeeper.sh demo-required-labels -o jsonpath="{.status.totalViolations}"
-```
-
-## Safe end of session
-```powershell
-kubectl -n flux-system patch gitrepository nkp-rx-demo --type merge -p "{\"spec\":{\"ref\":{\"branch\":\"scenario/load-off\"}}}"
-```
+## Legacy (Flux)
+If you still run the Flux demo chain in `flux-system`, use the previous Flux commands under `partner/demo-wall/start-demo-wall.ps1`.

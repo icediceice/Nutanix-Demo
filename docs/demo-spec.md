@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 Provide a branch-driven, repeatable partner demo for NKP Rx that shows:
-- GitOps operations with Flux
+- GitOps operations with ArgoCD (recommended) or Flux (legacy)
 - Progressive delivery with Istio canary routing
 - Incident simulation and observability triage
 - Governance posture with Gatekeeper policy in audit mode
@@ -11,7 +11,7 @@ Provide a branch-driven, repeatable partner demo for NKP Rx that shows:
 This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 
 ## 2. Demo Goals
-- Demonstrate change control by switching Flux Git source branch, not live-editing YAML.
+- Demonstrate change control by switching the Git branch (ArgoCD targetRevision), not live-editing YAML.
 - Show safe canary rollout from `v1` to `v2` using weighted traffic.
 - Prove incident detection and recovery using Kiali, Jaeger, Grafana, and Loki.
 - Show policy guardrails and compliance status without blocking the session.
@@ -30,8 +30,8 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 - `WOW.md`: KPI/policy objective definition for audience impact.
 
 ## 4. Reference Architecture
-1. Flux watches repo branch configured in `clusters/rx-demo/flux/gitrepository.yaml`.
-2. Flux applies `platform` first, then `apps`, then `mesh`, then `ops-loadgen`.
+1. ArgoCD Application/rx-demo watches scenario branches via `spec.source.targetRevision`.
+2. ArgoCD applies `platform`, `apps`, `mesh`, `ops` (including demo-wall and loadgen).
 3. Application runs in `demo-app` namespace with frontend, catalog, checkout, payment services (v1 and v2).
 4. Istio routes `frontend` service traffic across subsets `v1` and `v2`.
 5. k6 in `demo-ops` continuously drives storefront and checkout traffic.
@@ -128,11 +128,11 @@ Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
 - Primary operator command pack: `partner/COMMANDS.md`.
 - Reset methods:
   - Fast reset: branch to baseline + reconcile.
-  - Hard reset: delete `demo-app` and `demo-ops`, let Flux recreate.
+  - Hard reset: delete `demo-app` and `demo-ops`, let ArgoCD recreate.
 - Troubleshooting: `partner/TROUBLESHOOTING.md`.
 
 ## 12. Acceptance Criteria
-- Flux applies the chain with `Ready=True` for `platform`, `apps`, `mesh`, `ops-loadgen`.
+- ArgoCD Application `rx-demo` is `Synced` and `Healthy`.
 - Frontend is reachable and generates checkout flow traffic.
 - Canary branch changes produce expected v1/v2 weight changes.
 - Incident branches produce observable latency/error signals.
