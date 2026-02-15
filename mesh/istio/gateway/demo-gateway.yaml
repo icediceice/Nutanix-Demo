@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: demo-gateway
+  namespace: istio-helm-gateway-ns
+spec:
+  # NKP "istio-helm" gateway typically labels its pods/service with this selector.
+  # If your cluster differs, adjust to match the ingressgateway workload labels.
+  selector:
+    app: istio-helm-ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+

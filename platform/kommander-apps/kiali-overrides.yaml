@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kiali-overrides
+  namespace: kommander-default-workspace
+data:
+  values.yaml: |
+    cr:
+      spec:
+        # Kommander defaults assume Istio in istio-system (Istio Operator).
+        # With istio-helm, the control plane lives in istio-helm-system.
+        istio_namespace: istio-helm-system
