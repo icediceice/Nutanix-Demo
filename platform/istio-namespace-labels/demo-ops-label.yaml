@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: demo-app
+  name: demo-ops
   labels:
     istio.io/rev: istio-helm
+
