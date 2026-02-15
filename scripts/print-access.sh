@@ -35,6 +35,37 @@ if ! have "$KUBECTL"; then
   fail "kubectl not found (set KUBECTL=... if needed)"
 fi
 
+autodetect_kubeconfig() {
+  if [[ -n "${KUBECONFIG_PATH}" || -n "${CONTEXT_NAME}" ]]; then
+    return 0
+  fi
+
+  if [[ -n "${KUBECONFIG:-}" ]]; then
+    if [[ -f "${KUBECONFIG}" ]]; then
+      KUBECONFIG_PATH="${KUBECONFIG}"
+      return 0
+    fi
+  fi
+
+  local default_kc="${HOME}/.kube/config"
+  if [[ -f "${default_kc}" ]]; then
+    return 0
+  fi
+
+  # If ~/.kube/config is missing or invalid, try auth/ (repo convention).
+  local -a candidates=()
+  if [[ -d "auth" ]]; then
+    while IFS= read -r -d '' f; do
+      candidates+=("$f")
+    done < <(find auth -maxdepth 1 -type f \( -name "*.conf" -o -name "*.kubeconfig" -o -name "kubeconfig" \) -print0 2>/dev/null || true)
+  fi
+
+  if [[ "${#candidates[@]}" -eq 1 ]]; then
+    KUBECONFIG_PATH="${candidates[0]}"
+    return 0
+  fi
+}
+
 kc() {
   local args=()
   if [[ -n "${KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${KUBECONFIG_PATH}"); fi
@@ -56,6 +87,8 @@ ing_hosts() {
   local ns="$1"
   kc -n "$ns" get ingress -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.rules[*]}{.host}{" "}{end}{"\n"}{end}' 2>/dev/null || true
 }
+
+autodetect_kubeconfig
 
 echo "Context:"
 kc config current-context 2>/dev/null || true
@@ -120,4 +153,3 @@ if kc -n demo-ops get svc demo-wall >/dev/null 2>&1; then
 else
   echo "  Not found: demo-ops/svc demo-wall (wait for ArgoCD sync)"
 fi
-

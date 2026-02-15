@@ -28,13 +28,14 @@ Point `kubectl` at the target workload cluster (example: `workload02`).
 ### 1.1 One-command bootstrap (recommended)
 This handles new-cluster gaps (enables Istio/Kiali/Jaeger via Kommander AppDeployment if available, installs ArgoCD, creates the ArgoCD Application, and points it at a `scenario/*` branch):
 
-```bash
-./scripts/bootstrap-demo.sh --branch scenario/load-off
-```
-
-If you use a specific kubeconfig:
+Recommended (explicit kubeconfig):
 ```bash
 ./scripts/bootstrap-demo.sh --kubeconfig auth/workload02.conf --branch scenario/load-off
+```
+
+If your `kubectl` context is already set to the workload cluster, you can omit `--kubeconfig`:
+```bash
+./scripts/bootstrap-demo.sh --branch scenario/load-off
 ```
 
 ### 1.2 Manual bootstrap (fallback)

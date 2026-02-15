@@ -51,6 +51,59 @@ if ! have "$KUBECTL"; then
   fail "kubectl not found (set KUBECTL=... if needed)"
 fi
 
+autodetect_kubeconfig() {
+  # If user explicitly set --kubeconfig/--context, don't guess.
+  if [[ -n "${KUBECONFIG_PATH}" || -n "${CONTEXT_NAME}" ]]; then
+    return 0
+  fi
+
+  # Respect KUBECONFIG env var if it points to a readable file.
+  if [[ -n "${KUBECONFIG:-}" ]]; then
+    if [[ -f "${KUBECONFIG}" ]]; then
+      KUBECONFIG_PATH="${KUBECONFIG}"
+      return 0
+    fi
+    if [[ -d "${KUBECONFIG}" ]]; then
+      warn "KUBECONFIG points to a directory: ${KUBECONFIG}"
+    else
+      warn "KUBECONFIG is set but not a file: ${KUBECONFIG}"
+    fi
+  fi
+
+  # Default kubeconfig is ~/.kube/config. If it's a directory (common mistake), kubectl will fail.
+  local default_kc="${HOME}/.kube/config"
+  if [[ -f "${default_kc}" ]]; then
+    return 0
+  fi
+
+  if [[ -d "${default_kc}" ]]; then
+    warn "Detected invalid kubeconfig path: ${default_kc} is a directory."
+  fi
+
+  # Try to be fool-proof: if exactly one kubeconfig exists under auth/, use it.
+  # This keeps the demo workflow consistent with the docs.
+  local -a candidates=()
+  if [[ -d "auth" ]]; then
+    while IFS= read -r -d '' f; do
+      candidates+=("$f")
+    done < <(find auth -maxdepth 1 -type f \( -name "*.conf" -o -name "*.kubeconfig" -o -name "kubeconfig" \) -print0 2>/dev/null || true)
+  fi
+
+  if [[ "${#candidates[@]}" -eq 1 ]]; then
+    KUBECONFIG_PATH="${candidates[0]}"
+    warn "Using kubeconfig auto-detected at: ${KUBECONFIG_PATH}"
+    return 0
+  fi
+
+  if [[ "${#candidates[@]}" -gt 1 ]]; then
+    warn "Multiple kubeconfigs found under auth/:"
+    for c in "${candidates[@]}"; do echo "  - ${c}" >&2; done
+    fail "Please re-run with --kubeconfig auth/<cluster>.conf"
+  fi
+
+  fail "No kubeconfig selected. Re-run with --kubeconfig auth/<cluster>.conf (example: --kubeconfig auth/workload02.conf)"
+}
+
 kc() {
   local args=()
   if [[ -n "${KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${KUBECONFIG_PATH}"); fi
@@ -160,6 +213,8 @@ EOF
     warn "Timed out waiting for Istio DestinationRule CRD; demo mesh resources may not sync until Istio is ready"
   fi
 }
+
+autodetect_kubeconfig
 
 echo "Target cluster:"
 kc cluster-info >/dev/null
