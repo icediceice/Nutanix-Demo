@@ -21,6 +21,7 @@ Usage:
   ./scripts/bootstrap-demo.sh [--kubeconfig PATH] [--context NAME] [--branch scenario/*] [--repo URL]
                              [--workspace-namespace NS] [--skip-kommander-apps]
                              [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
+                             [--ghcr-username USER] [--ghcr-token-file PATH]
 
 What it does:
   1) (Optional) Enables required Kommander apps (Istio/Kiali/Jaeger) via AppDeployment (no UI clicks).
@@ -43,6 +44,8 @@ MGMT_CONTEXT_NAME=""
 REPO_URL="$REPO_URL_DEFAULT"
 BRANCH="$BRANCH_DEFAULT"
 SKIP_KOMMANDER_APPS=0
+GHCR_USERNAME_ARG=""
+GHCR_TOKEN_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,6 +57,8 @@ while [[ $# -gt 0 ]]; do
     --branch) BRANCH="${2:-}"; shift 2 ;;
     --workspace-namespace) WORKSPACE_NS="${2:-}"; shift 2 ;;
     --skip-kommander-apps) SKIP_KOMMANDER_APPS=1; shift 1 ;;
+    --ghcr-username) GHCR_USERNAME_ARG="${2:-}"; shift 2 ;;
+    --ghcr-token-file) GHCR_TOKEN_FILE="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) fail "unknown arg: $1 (use --help)" ;;
   esac
@@ -128,6 +133,61 @@ kc_mgmt() {
   if [[ -n "${MGMT_KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${MGMT_KUBECONFIG_PATH}"); fi
   if [[ -n "${MGMT_CONTEXT_NAME}" ]]; then args+=(--context "${MGMT_CONTEXT_NAME}"); fi
   "$KUBECTL" "${args[@]}" "$@"
+}
+
+ensure_ghcr_pull_secret() {
+  # Demo app images may be private in GHCR; if so, workloads will stay in ImagePullBackOff until a pull secret exists.
+  local ns="demo-app"
+  local secret="ghcr-pull"
+  local user="${GHCR_USERNAME_ARG:-${GHCR_USERNAME:-icediceice}}"
+  local token="${GHCR_TOKEN:-}"
+
+  if kc -n "${ns}" get secret "${secret}" >/dev/null 2>&1; then
+    echo "${ns}/secret ${secret}: present"
+    return 0
+  fi
+
+  # Make a best-effort to ensure the namespace exists so the secret can be applied early.
+  if ! kc get ns "${ns}" >/dev/null 2>&1; then
+    kc create ns "${ns}" >/dev/null 2>&1 || true
+  fi
+
+  # Prefer a token file if provided (safer than flags/env because it won't show up in shell history/process list).
+  if [[ -z "${token}" && -n "${GHCR_TOKEN_FILE}" ]]; then
+    if [[ -f "${GHCR_TOKEN_FILE}" ]]; then
+      token="$(tr -d '\r\n' < "${GHCR_TOKEN_FILE}" | head -c 4096)"
+    else
+      warn "--ghcr-token-file provided but not found: ${GHCR_TOKEN_FILE}"
+    fi
+  fi
+
+  # Optional convenience: if GitHub CLI is installed and the operator has already authenticated, reuse that token.
+  if [[ -z "${token}" ]] && have gh; then
+    token="$(gh auth token 2>/dev/null || true)"
+  fi
+
+  if [[ -z "${token}" ]]; then
+    warn "${ns}/secret ${secret}: missing. Required if ghcr.io images are private."
+    warn "Provide creds in one of these ways, then re-run:"
+    warn "  1) Token file:"
+    warn "     printf '%s' \"<GHCR_TOKEN>\" > auth/ghcr.token && chmod 600 auth/ghcr.token"
+    warn "     ./scripts/bootstrap-demo.sh ... --ghcr-username ${user} --ghcr-token-file auth/ghcr.token"
+    warn "  2) Env vars:"
+    warn "     export GHCR_USERNAME=${user}"
+    warn "     export GHCR_TOKEN='...'"
+    warn "  3) GitHub CLI:"
+    warn "     gh auth login"
+    return 0
+  fi
+
+  kc -n "${ns}" create secret docker-registry "${secret}" \
+    --docker-server=ghcr.io \
+    --docker-username="${user}" \
+    --docker-password="${token}" \
+    --docker-email="unused@example.com" \
+    --dry-run=client -o yaml | kc apply -f - >/dev/null
+
+  echo "${ns}/secret ${secret}: applied"
 }
 
 kommander_kc() {
@@ -288,6 +348,10 @@ kc apply -f clusters/rx-demo/argocd/apps/application.yaml >/dev/null
 kc -n "$ARGO_NS" patch application "$APP_NAME" --type merge \
   -p "{\"spec\":{\"source\":{\"repoURL\":\"${REPO_URL}\",\"targetRevision\":\"${BRANCH}\"}}}" >/dev/null
 kc -n "$ARGO_NS" annotate application "$APP_NAME" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+
+echo
+echo "Ensuring GHCR pull secret (optional)..."
+ensure_ghcr_pull_secret
 
 echo
 echo "ArgoCD:"
