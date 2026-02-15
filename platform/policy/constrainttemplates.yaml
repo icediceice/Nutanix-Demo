@@ -1,0 +1,97 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdemorequiredlabels
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDemoRequiredLabels
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemorequiredlabels
+
+        violation[{"msg": msg}] {
+          not input.review.object.metadata.labels.app
+          msg := "label 'app' is required"
+        }
+
+        violation[{"msg": msg}] {
+          not input.review.object.metadata.labels.version
+          msg := "label 'version' is required"
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdemorequiredresources
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDemoRequiredResources
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemorequiredresources
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.requests.cpu
+          msg := sprintf("container %v missing requests.cpu", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.requests.memory
+          msg := sprintf("container %v missing requests.memory", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.limits.cpu
+          msg := sprintf("container %v missing limits.cpu", [c.name])
+        }
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          not c.resources.limits.memory
+          msg := sprintf("container %v missing limits.memory", [c.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdemonolatest
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDemoNoLatest
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdemonolatest
+
+        violation[{"msg": msg}] {
+          c := input.review.object.spec.containers[_]
+          endswith(c.image, ":latest")
+          msg := sprintf("container %v uses disallowed :latest tag", [c.name])
+        }
+
