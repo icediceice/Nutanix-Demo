@@ -9,6 +9,7 @@
 - Gatekeeper installed and running
 - Image registry access to pull demo images
   - If `ghcr.io/icediceice/otel-shop-lite-*` images are private, create `secret/ghcr-pull` in `demo-app` (see `docs/ghcr-pull-secret.md`)
+  - If you export `GHCR_USERNAME` + `GHCR_TOKEN` before running `./scripts/bootstrap-demo.sh`, the bootstrap script will create/update `demo-app/secret ghcr-pull` automatically.
 - Local operator needs kubeconfig for the target workload cluster.
   - Recommended convention: keep kubeconfigs under `auth/` (ignored by git), e.g. `auth/workload02.conf`
 - Local operator needs `kubectl` in `PATH`.

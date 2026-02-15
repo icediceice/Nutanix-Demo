@@ -130,6 +130,47 @@ kc_mgmt() {
   "$KUBECTL" "${args[@]}" "$@"
 }
 
+ensure_ghcr_pull_secret() {
+  # Demo app images may be private in GHCR; if so, workloads will stay in ImagePullBackOff until a pull secret exists.
+  local ns="demo-app"
+  local secret="ghcr-pull"
+  local user="${GHCR_USERNAME:-icediceice}"
+  local token="${GHCR_TOKEN:-}"
+
+  if kc -n "${ns}" get secret "${secret}" >/dev/null 2>&1; then
+    echo "${ns}/secret ${secret}: present"
+    return 0
+  fi
+
+  # Make a best-effort to ensure the namespace exists so the secret can be applied early.
+  if ! kc get ns "${ns}" >/dev/null 2>&1; then
+    kc create ns "${ns}" >/dev/null 2>&1 || true
+  fi
+
+  # Optional convenience: if GitHub CLI is installed and the operator has already authenticated, reuse that token.
+  if [[ -z "${token}" ]] && have gh; then
+    token="$(gh auth token 2>/dev/null || true)"
+  fi
+
+  if [[ -z "${token}" ]]; then
+    warn "${ns}/secret ${secret}: missing. Required if ghcr.io images are private."
+    warn "Set env vars and re-run this script:"
+    warn "  export GHCR_USERNAME=${user}"
+    warn "  export GHCR_TOKEN='...'"
+    warn "Or authenticate with GitHub CLI: gh auth login"
+    return 0
+  fi
+
+  kc -n "${ns}" create secret docker-registry "${secret}" \
+    --docker-server=ghcr.io \
+    --docker-username="${user}" \
+    --docker-password="${token}" \
+    --docker-email="unused@example.com" \
+    --dry-run=client -o yaml | kc apply -f - >/dev/null
+
+  echo "${ns}/secret ${secret}: applied"
+}
+
 kommander_kc() {
   # If mgmt kubeconfig/context provided, use that for Kommander CRDs; else fall back to workload kubeconfig.
   if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
@@ -288,6 +329,10 @@ kc apply -f clusters/rx-demo/argocd/apps/application.yaml >/dev/null
 kc -n "$ARGO_NS" patch application "$APP_NAME" --type merge \
   -p "{\"spec\":{\"source\":{\"repoURL\":\"${REPO_URL}\",\"targetRevision\":\"${BRANCH}\"}}}" >/dev/null
 kc -n "$ARGO_NS" annotate application "$APP_NAME" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
+
+echo
+echo "Ensuring GHCR pull secret (optional)..."
+ensure_ghcr_pull_secret
 
 echo
 echo "ArgoCD:"
