@@ -1,7 +1,7 @@
 # Verification Checklist
 
 ## Day-before checks
-1. Flux Kustomizations are `Ready=True`: `platform`, `apps`, `mesh`, `ops-loadgen`.
+1. ArgoCD Application `rx-demo` is `Synced` and `Healthy`.
 2. Kiali loads graph for `demo-app` with live edges.
 3. Jaeger receives traces for `frontend`, `checkout-api`, `payment-mock`.
 4. Grafana shows request/error/latency panels for demo services.
