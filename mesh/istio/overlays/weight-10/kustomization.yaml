@@ -4,7 +4,4 @@ resources:
   - ../../virtualservice
 patches:
   - path: weights.yaml
-  - path: weights-catalog-api.yaml
-  - path: weights-checkout-api.yaml
-  - path: weights-payment-mock.yaml
   - path: weights-ingress.yaml

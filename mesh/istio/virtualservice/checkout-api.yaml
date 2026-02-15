@@ -7,7 +7,28 @@ spec:
   hosts:
     - checkout-api.demo-app.svc.cluster.local
   http:
-    - route:
+    - name: from-frontend-v2
+      match:
+        - sourceLabels:
+            app: frontend
+            version: v2
+      route:
+        - destination:
+            host: checkout-api.demo-app.svc.cluster.local
+            subset: v2
+          weight: 100
+    - name: from-frontend-v1
+      match:
+        - sourceLabels:
+            app: frontend
+            version: v1
+      route:
+        - destination:
+            host: checkout-api.demo-app.svc.cluster.local
+            subset: v1
+          weight: 100
+    - name: default
+      route:
         - destination:
             host: checkout-api.demo-app.svc.cluster.local
             subset: v1
@@ -16,4 +37,3 @@ spec:
             host: checkout-api.demo-app.svc.cluster.local
             subset: v2
           weight: 0
-
