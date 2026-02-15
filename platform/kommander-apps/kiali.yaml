@@ -103,9 +103,12 @@ spec:
         kind: HelmRelease
         name: kiali
     - patch: |
-        - op: add
-          path: /metadata/labels/kommander.d2iq.io~1managed-by-kind
-          value: AppDeployment
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: kiali
+          labels:
+            kommander.d2iq.io/managed-by-kind: AppDeployment
       target:
         kind: HelmRelease
         name: kiali
