@@ -33,6 +33,14 @@ Recommended (explicit kubeconfig):
 ./scripts/bootstrap-demo.sh --kubeconfig auth/workload02.conf --branch scenario/load-off
 ```
 
+If the workload cluster does not have Kommander CRDs locally and you want the script to auto-enable Istio/Kiali/Jaeger with no UI clicks, also pass the **management** cluster kubeconfig:
+```bash
+./scripts/bootstrap-demo.sh \
+  --kubeconfig auth/workload02.conf \
+  --mgmt-kubeconfig auth/management.conf \
+  --branch scenario/load-off
+```
+
 If your `kubectl` context is already set to the workload cluster, you can omit `--kubeconfig`:
 ```bash
 ./scripts/bootstrap-demo.sh --branch scenario/load-off

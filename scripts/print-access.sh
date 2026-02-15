@@ -5,14 +5,17 @@ KUBECTL="${KUBECTL:-kubectl}"
 
 KUBECONFIG_PATH=""
 CONTEXT_NAME=""
+MGMT_KUBECONFIG_PATH=""
+MGMT_CONTEXT_NAME=""
 
 usage() {
   cat <<'EOF'
 Usage:
   ./scripts/print-access.sh [--kubeconfig PATH] [--context NAME]
+                          [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
 
 Prints:
-  - Kommander UI (if detected on this cluster kubeconfig)
+  - Kommander UI (from management cluster if --mgmt-kubeconfig is provided, else from current kubeconfig)
   - ArgoCD UI + initial admin password command (if installed)
   - Demo app ingress URL (Istio LoadBalancer)
   - Demo Wall URL (LoadBalancer)
@@ -26,6 +29,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubeconfig) KUBECONFIG_PATH="${2:-}"; shift 2 ;;
     --context) CONTEXT_NAME="${2:-}"; shift 2 ;;
+    --mgmt-kubeconfig|--management-kubeconfig) MGMT_KUBECONFIG_PATH="${2:-}"; shift 2 ;;
+    --mgmt-context|--management-context) MGMT_CONTEXT_NAME="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) fail "unknown arg: $1 (use --help)" ;;
   esac
@@ -35,7 +40,7 @@ if ! have "$KUBECTL"; then
   fail "kubectl not found (set KUBECTL=... if needed)"
 fi
 
-autodetect_kubeconfig() {
+autodetect_workload_kubeconfig() {
   if [[ -n "${KUBECONFIG_PATH}" || -n "${CONTEXT_NAME}" ]]; then
     return 0
   fi
@@ -66,18 +71,33 @@ autodetect_kubeconfig() {
   fi
 }
 
-kc() {
+kc_work() {
   local args=()
   if [[ -n "${KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${KUBECONFIG_PATH}"); fi
   if [[ -n "${CONTEXT_NAME}" ]]; then args+=(--context "${CONTEXT_NAME}"); fi
   "$KUBECTL" "${args[@]}" "$@"
 }
 
+kc_mgmt() {
+  local args=()
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${MGMT_KUBECONFIG_PATH}"); fi
+  if [[ -n "${MGMT_CONTEXT_NAME}" ]]; then args+=(--context "${MGMT_CONTEXT_NAME}"); fi
+  "$KUBECTL" "${args[@]}" "$@"
+}
+
+kommander_kc() {
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
+    kc_mgmt "$@"
+  else
+    kc_work "$@"
+  fi
+}
+
 svc_lb() {
   local ns="$1" name="$2"
   local ip host
-  ip="$(kc -n "$ns" get svc "$name" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
-  host="$(kc -n "$ns" get svc "$name" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+  ip="$(kc_work -n "$ns" get svc "$name" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+  host="$(kc_work -n "$ns" get svc "$name" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
   if [[ -n "$ip" ]]; then echo "$ip"; return 0; fi
   if [[ -n "$host" ]]; then echo "$host"; return 0; fi
   return 1
@@ -85,17 +105,22 @@ svc_lb() {
 
 ing_hosts() {
   local ns="$1"
-  kc -n "$ns" get ingress -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.rules[*]}{.host}{" "}{end}{"\n"}{end}' 2>/dev/null || true
+  kommander_kc -n "$ns" get ingress -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{range .spec.rules[*]}{.host}{" "}{end}{"\n"}{end}' 2>/dev/null || true
 }
 
-autodetect_kubeconfig
+autodetect_workload_kubeconfig
 
-echo "Context:"
-kc config current-context 2>/dev/null || true
+echo "Workload context:"
+kc_work config current-context 2>/dev/null || true
+
+if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
+  echo "Management context:"
+  kc_mgmt config current-context 2>/dev/null || true
+fi
 echo
 
 echo "Kommander UI (if present):"
-if kc get ns kommander >/dev/null 2>&1; then
+if kommander_kc get ns kommander >/dev/null 2>&1; then
   # Common: Ingress in ns "kommander" with host like kommander.<domain>
   hosts="$(ing_hosts kommander | sed '/^$/d' || true)"
   if [[ -n "${hosts}" ]]; then
@@ -104,16 +129,16 @@ if kc get ns kommander >/dev/null 2>&1; then
     done
   else
     # Some installs expose services; print any LB services that look like kommander.
-    kc -n kommander get svc -o wide 2>/dev/null | awk 'NR==1 || $1 ~ /kommander|traefik|nginx|dex|kommander-ui/'
+    kommander_kc -n kommander get svc -o wide 2>/dev/null | awk 'NR==1 || $1 ~ /kommander|traefik|nginx|dex|kommander-ui/'
   fi
 else
   echo "  Not detected on this kubeconfig (namespace kommander not found)."
-  echo "  If Kommander runs on a separate management cluster, run this script against the management kubeconfig."
+  echo "  If Kommander runs on a separate management cluster, re-run with --mgmt-kubeconfig auth/management.conf"
 fi
 echo
 
 echo "ArgoCD UI (if present):"
-if kc -n argocd get deploy argocd-server >/dev/null 2>&1; then
+if kc_work -n argocd get deploy argocd-server >/dev/null 2>&1; then
   if lb="$(svc_lb argocd argocd-server)"; then
     echo "  URL: https://${lb}/"
   else
@@ -129,7 +154,7 @@ fi
 echo
 
 echo "Demo app (Istio ingress):"
-if kc -n istio-helm-gateway-ns get svc istio-helm-ingressgateway >/dev/null 2>&1; then
+if kc_work -n istio-helm-gateway-ns get svc istio-helm-ingressgateway >/dev/null 2>&1; then
   if lb="$(svc_lb istio-helm-gateway-ns istio-helm-ingressgateway)"; then
     echo "  URL: http://${lb}/"
   else
@@ -142,7 +167,7 @@ fi
 echo
 
 echo "Demo Wall:"
-if kc -n demo-ops get svc demo-wall >/dev/null 2>&1; then
+if kc_work -n demo-ops get svc demo-wall >/dev/null 2>&1; then
   if lb="$(svc_lb demo-ops demo-wall)"; then
     echo "  URL: http://${lb}/"
     echo "  API: http://${lb}/api/status"

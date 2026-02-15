@@ -7,6 +7,11 @@ Use this for operator copy/paste during demos.
 ./scripts/print-access.sh --kubeconfig auth/workload02.conf
 ```
 
+If Kommander is only on the management cluster, add:
+```bash
+./scripts/print-access.sh --kubeconfig auth/workload02.conf --mgmt-kubeconfig auth/management.conf
+```
+
 ## Prereqs
 - `kubectl` points to the target workload cluster.
 - ArgoCD installed (`argocd` namespace).
