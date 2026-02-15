@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: payment-mock
+  namespace: demo-app
+spec:
+  hosts:
+    - payment-mock.demo-app.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: payment-mock.demo-app.svc.cluster.local
+            subset: v1
+          weight: 100
+        - destination:
+            host: payment-mock.demo-app.svc.cluster.local
+            subset: v2
+          weight: 0
+
