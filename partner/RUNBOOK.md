@@ -1,0 +1,111 @@
+# Partner Runbook (ArgoCD + In-Cluster Demo Wall)
+
+This demo is branch-driven. You do not edit live YAML in the cluster during the session.
+
+## 0) Rules (avoid conflicts)
+- Use **ArgoCD** to deploy the demo (recommended).
+- Do **not** also bootstrap the Flux demo chain (`clusters/rx-demo/flux`) on the same cluster.
+- The workload cluster should be attached to Kommander so platform add-ons (Istio/Kiali/Jaeger) can be installed.
+
+## 1) Deploy To A New Cluster
+Point `kubectl` at the target workload cluster (example: `workload02`).
+
+### 1.1 Install ArgoCD
+```bash
+kubectl apply -k clusters/rx-demo/argocd/bootstrap
+kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
+```
+
+Get ArgoCD UI address:
+```bash
+kubectl -n argocd get svc argocd-server -o wide
+```
+
+Get initial admin password:
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d && echo
+```
+
+Login:
+- URL: `https://<ARGOCD_LB_IP>/`
+- Username: `admin`
+- Password: output from command above
+
+### 1.2 Create The Demo Application
+```bash
+kubectl apply -f clusters/rx-demo/argocd/apps/appproject.yaml
+kubectl apply -f clusters/rx-demo/argocd/apps/application.yaml
+kubectl -n argocd get application rx-demo -o wide
+```
+
+Expected: `rx-demo` becomes `Synced` and `Healthy` on branch `scenario/load-off`.
+
+## 2) Access The Demo App (External)
+This repo configures an Istio Gateway/VirtualService so you can access the frontend via the ingress IP.
+
+Get Istio ingress external IP:
+```bash
+kubectl -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
+```
+
+Open:
+- `http://<ISTIO_INGRESS_LB_IP>/`
+
+Fallback (no LoadBalancer):
+```bash
+kubectl -n demo-app port-forward svc/frontend 8080:80
+```
+Open `http://localhost:8080`.
+
+## 3) Access Demo Wall (In-Cluster)
+Demo Wall is deployed by ArgoCD into `demo-ops` as `svc/demo-wall` (LoadBalancer).
+
+```bash
+kubectl -n demo-ops get svc demo-wall -o wide
+```
+
+Open:
+- `http://<DEMO_WALL_LB_IP>/`
+
+Fallback (no LoadBalancer):
+```bash
+kubectl -n demo-ops port-forward svc/demo-wall 9090:80
+```
+Open `http://localhost:9090`.
+
+## 4) Switch Scenarios (Branch-Driven)
+Change the ArgoCD Application `targetRevision` to a `scenario/*` branch.
+
+Example: canary 10%
+```bash
+kubectl -n argocd patch application rx-demo --type merge \
+  -p '{"spec":{"source":{"targetRevision":"scenario/canary-10"}}}'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+kubectl -n argocd get application rx-demo -o wide
+```
+
+Branches:
+- `scenario/baseline`
+- `scenario/load-off`
+- `scenario/load-peak`
+- `scenario/canary-10`
+- `scenario/canary-50`
+- `scenario/canary-100`
+- `scenario/incident-latency`
+- `scenario/incident-error`
+- `scenario/mirror-v2`
+
+## 5) End Session Safely
+Always end on:
+- `scenario/load-off`
+
+## 6) Reset
+Fast reset:
+- set `targetRevision` to `scenario/baseline`, wait `Synced/Healthy`, then set `scenario/load-off`.
+
+Hard reset (rare):
+```bash
+kubectl delete ns demo-app demo-ops
+```
+ArgoCD will recreate them on next sync.
