@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-wall
+  namespace: demo-ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-wall
+  template:
+    metadata:
+      labels:
+        app: demo-wall
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: demo-wall
+      containers:
+        - name: demo-wall
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/server.py", "--port", "8080"]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: app
+          configMap:
+            name: demo-wall
