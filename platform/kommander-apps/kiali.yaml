@@ -102,3 +102,10 @@ spec:
       target:
         kind: HelmRelease
         name: kiali
+    - patch: |
+        - op: add
+          path: /metadata/labels/kommander.d2iq.io~1managed-by-kind
+          value: AppDeployment
+      target:
+        kind: HelmRelease
+        name: kiali
