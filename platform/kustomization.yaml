@@ -4,6 +4,7 @@ resources:
   - namespaces
   - rbac
   - quotas-limits
-  - istio-namespace-labels
-  - gatekeeper
   - policy
+patches:
+  - path: istio-namespace-labels/demo-app-label.yaml
+  - path: istio-namespace-labels/demo-ops-label.yaml
