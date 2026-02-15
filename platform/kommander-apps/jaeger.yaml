@@ -1,0 +1,92 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jaeger
+  namespace: kommander-default-workspace
+  labels:
+    kustomize.toolkit.fluxcd.io/name: apps-kommander-default-workspace
+    kustomize.toolkit.fluxcd.io/namespace: kommander-default-workspace
+    nkp.nutanix.com/app-id: jaeger
+    nkp.nutanix.com/app-ref: jaeger-2.57.3
+    nkp.nutanix.com/kustomization-type: appdeployment
+  annotations:
+    config.kubernetes.io/origin: |
+      path: management/jaeger/jaeger.yaml
+spec:
+  interval: 6h
+  retryInterval: 1m
+  timeout: 10m
+  wait: true
+  prune: true
+  force: false
+  dependsOn:
+    - name: istio-helm
+      namespace: kommander-default-workspace
+  path: ./applications/jaeger/2.57.3
+  sourceRef:
+    kind: GitRepository
+    name: management
+    namespace: kommander-flux
+  postBuild:
+    substitute:
+      appName: jaeger
+      appVersion: 2.57.3
+      releaseName: jaeger
+      releaseNamespace: kommander-default-workspace
+      workspaceNamespace: kommander-default-workspace
+  patches:
+    - patch: |2-
+
+        kind: OCIRepository
+        metadata:
+          name: not-used
+          labels:
+            nkp.nutanix.com/oci-config-patched: "true"
+        spec:
+          proxySecretRef:
+            name: nkp-oci-proxy
+          certSecretRef:
+            name: nkp-oci-proxy-ca
+      target:
+        kind: OCIRepository
+    - patch: |
+        - op: add
+          path: /spec/patches
+          value: []
+      target:
+        kind: Kustomization
+        labelSelector: '!nkp.nutanix.com/kustomization-has-patches'
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |2-
+
+              kind: OCIRepository
+              metadata:
+                name: not-used
+                labels:
+                  nkp.nutanix.com/oci-config-patched: "true"
+              spec:
+                proxySecretRef:
+                  name: nkp-oci-proxy
+                certSecretRef:
+                  name: nkp-oci-proxy-ca
+            target:
+              kind: OCIRepository
+      target:
+        kind: Kustomization
+    - patch: |
+        kind: Kustomization
+        metadata:
+          name: not-used
+        spec:
+          postBuild:
+            substitute:
+              appName: jaeger
+              appVersion: 2.57.3
+              releaseName: jaeger
+              releaseNamespace: kommander-default-workspace
+              workspaceNamespace: kommander-default-workspace
+      target:
+        kind: Kustomization
