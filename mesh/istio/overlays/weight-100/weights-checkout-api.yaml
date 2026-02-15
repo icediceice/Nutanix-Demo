@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: checkout-api
+  namespace: demo-app
+spec:
+  http:
+    - route:
+        - destination:
+            host: checkout-api.demo-app.svc.cluster.local
+            subset: v1
+          weight: 0
+        - destination:
+            host: checkout-api.demo-app.svc.cluster.local
+            subset: v2
+          weight: 100
+
