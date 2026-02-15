@@ -37,6 +37,3 @@ Expected:
 
 ## 4) End session safely
 Switch to `scenario/load-off`.
-
-## Legacy mode
-Flux bootstrap still exists at `clusters/rx-demo/flux`, but ArgoCD is the recommended operator UI/status surface.

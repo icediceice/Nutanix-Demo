@@ -3,7 +3,7 @@
 ## Required
 - NKP workload cluster attached and reachable
 - Kommander components healthy
-  - Flux controllers for Kommander internals typically run in `kommander-flux`
+  - Kommander internal GitOps controllers typically run in `kommander-flux`
 - ArgoCD installed in `argocd` namespace (this demo deploys via ArgoCD)
 - Istio + Kiali + Grafana/Loki + Jaeger available (Kommander-managed workload add-ons)
 - Gatekeeper installed and running
@@ -15,5 +15,5 @@
 - Scenario control is via `scenario/*` branches (ArgoCD `Application.spec.source.targetRevision`)
 
 ## Optional
-- `clusters/rx-demo/image-automation/*`: optional v2 image auto-update (Flux image automation pattern)
+- `clusters/rx-demo/image-automation/*`: optional v2 image auto-update (not used in the ArgoCD demo flow)
 - `platform/nkp-apps/*`: workspace-scoped AppDeployment templates

@@ -23,11 +23,6 @@ jobs:
           set -euo pipefail
           kustomize build clusters/rx-demo/argocd/root >/tmp/render-argocd.yaml
 
-      - name: Render Flux bootstrap (sanity)
-        run: |
-          set -euo pipefail
-          kustomize build clusters/rx-demo/flux >/tmp/render-flux.yaml
-
       - name: Render top-level bundles
         run: |
           set -euo pipefail
