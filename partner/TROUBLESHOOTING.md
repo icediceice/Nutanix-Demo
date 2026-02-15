@@ -12,6 +12,9 @@
   - `kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite`
 - If `Missing/Degraded`, inspect:
   - `kubectl -n argocd describe application rx-demo`
+- If sync fails with `one or more synchronization tasks are not valid` and mentions missing CRDs, wait 30-60s and refresh.
+  - Some CRDs are created asynchronously (example: Gatekeeper ConstraintTemplates create constraint CRDs).
+  - This repo sets Argo sync option `SkipDryRunOnMissingResource=true` to avoid blocking first sync.
 
 ## Kiali graph weak
 - Increase load (`scenario/load-peak`).
