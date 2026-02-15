@@ -8,9 +8,6 @@ Simplified, branch-driven demo for NKP Rx environments.
 3. Switch scenarios by changing the ArgoCD Application `targetRevision` to a `scenario/*` branch.
 4. End on `scenario/load-off`.
 
-## Legacy workflow (Flux)
-Flux bootstrap still exists at `clusters/rx-demo/flux`.
-
 ## Start here
 - `partner/RUNBOOK.md`
 - `partner/QUICKSTART.md`
@@ -21,7 +18,6 @@ Flux bootstrap still exists at `clusters/rx-demo/flux`.
 
 ## Repo layout
 - `clusters/rx-demo/argocd`: ArgoCD bootstrap + Application (recommended)
-- `clusters/rx-demo/flux`: Flux source + Kustomization dependency chain (legacy)
 - `platform`: namespaces, RBAC, quotas, Istio injection labels, Kommander add-ons
 - `apps`: otel-shop-lite app manifests and fault overlays
 - `mesh`: Istio DestinationRule/VirtualService overlays
@@ -37,5 +33,4 @@ Flux bootstrap still exists at `clusters/rx-demo/flux`.
 
 ## Variables to set before first cluster run
 - ArgoCD mode: none (choose a `scenario/*` branch by setting Argo `targetRevision`).
-- Flux mode:
-  - `clusters/rx-demo/flux/gitrepository.yaml`: set `spec.url` and `spec.ref.branch`.
+Note: Kommander uses internal GitOps controllers; the demo is operated via ArgoCD.
