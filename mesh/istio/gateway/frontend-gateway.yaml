@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: frontend-gateway
+  namespace: demo-app
+spec:
+  # Use the Kommander-installed Istio ingress gateway on workload01.
+  selector:
+    istio: istio-helm-ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        # Resolves to the current ingress LB IP (10.136.227.59).
+        - frontend.10.136.227.59.sslip.io

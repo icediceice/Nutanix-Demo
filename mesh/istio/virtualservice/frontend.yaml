@@ -6,6 +6,10 @@ metadata:
 spec:
   hosts:
     - frontend.demo-app.svc.cluster.local
+    - frontend.10.136.227.59.sslip.io
+  gateways:
+    - mesh
+    - frontend-gateway
   http:
     - route:
         - destination:
