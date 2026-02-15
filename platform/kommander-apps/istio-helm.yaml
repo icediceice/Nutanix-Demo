@@ -90,52 +90,87 @@ spec:
       target:
         kind: Kustomization
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: istio-helm-base
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-base
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-base
       target:
-        kind: HelmRelease
-        name: istio-helm-base
+        kind: Kustomization
+        name: istio-helm-helmrelease
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: istio-helm-cni
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-cni
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-cni
       target:
-        kind: HelmRelease
-        name: istio-helm-cni
+        kind: Kustomization
+        name: istio-helm-helmrelease
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: istio-helm-istiod
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-istiod
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-istiod
       target:
-        kind: HelmRelease
-        name: istio-helm-istiod
+        kind: Kustomization
+        name: istio-helm-helmrelease
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: istio-helm-ztunnel
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-ztunnel
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-ztunnel
       target:
-        kind: HelmRelease
-        name: istio-helm-ztunnel
+        kind: Kustomization
+        name: istio-helm-helmrelease
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: istio-helm-gateway
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-gateway
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-gateway
       target:
-        kind: HelmRelease
-        name: istio-helm-gateway
+        kind: Kustomization
+        name: istio-helm-helmrelease
