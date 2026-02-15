@@ -3,6 +3,7 @@
 Simplified, branch-driven demo for NKP Rx environments.
 
 ## Recommended workflow (ArgoCD)
+0. `git clone https://github.com/icediceice/Nutanix-Demo.git` and `cd Nutanix-Demo`
 1. Bootstrap everything (incl. ArgoCD) with `./scripts/bootstrap-demo.sh`.
 2. Switch scenarios by changing the ArgoCD Application `targetRevision` to a `scenario/*` branch.
 3. End on `scenario/load-off`.
