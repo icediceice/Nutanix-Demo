@@ -9,6 +9,40 @@ Notes:
 - The token needs at least `read:packages` to pull (and `write:packages` if you are pushing images).
 - Do not commit kubeconfigs/tokens to git.
 
+## Option 0: Token File (Non-Interactive)
+
+```bash
+mkdir -p auth
+printf '%s' "<GHCR_TOKEN>" > auth/ghcr.token
+chmod 600 auth/ghcr.token
+```
+
+Then either:
+- run `./scripts/bootstrap-demo.sh ... --ghcr-username icediceice --ghcr-token-file auth/ghcr.token` (preferred), or
+- export `GHCR_TOKEN="$(cat auth/ghcr.token)"` and use Option A/B below.
+
+## Option A: Use GitHub CLI (Recommended)
+
+Login:
+
+```bash
+gh auth login
+```
+
+Then create/update the secret (idempotent):
+
+```bash
+export GHCR_USERNAME="icediceice"
+export GHCR_TOKEN="$(gh auth token)"
+
+kubectl -n demo-app create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io \
+  --docker-username="${GHCR_USERNAME}" \
+  --docker-password="${GHCR_TOKEN}" \
+  --docker-email="unused@example.com" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
 ## Create Secret (Bash)
 
 ```bash
@@ -28,4 +62,3 @@ kubectl -n demo-app rollout restart \
   deploy/checkout-api-v1 deploy/checkout-api-v2 \
   deploy/payment-mock-v1 deploy/payment-mock-v2
 ```
-
