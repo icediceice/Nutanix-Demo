@@ -15,9 +15,12 @@ usage() {
 Usage:
   ./scripts/bootstrap-demo.sh [--kubeconfig PATH] [--context NAME] [--branch scenario/*] [--repo URL]
                              [--workspace-namespace NS] [--skip-kommander-apps]
+                             [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
 
 What it does:
   1) (Optional) Enables required Kommander apps (Istio/Kiali/Jaeger) via AppDeployment (no UI clicks).
+     If your workload cluster does not have Kommander CRDs locally, pass --mgmt-kubeconfig/--mgmt-context
+     to point this step at the Kommander management cluster.
   2) Installs ArgoCD (LoadBalancer service) from clusters/rx-demo/argocd/bootstrap.
   3) Creates ArgoCD AppProject + Application and points it at a scenario branch.
   4) Prints the URLs/commands to access ArgoCD, the Demo App, and Demo Wall.
@@ -30,6 +33,8 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 KUBECONFIG_PATH=""
 CONTEXT_NAME=""
+MGMT_KUBECONFIG_PATH=""
+MGMT_CONTEXT_NAME=""
 REPO_URL="$REPO_URL_DEFAULT"
 BRANCH="$BRANCH_DEFAULT"
 SKIP_KOMMANDER_APPS=0
@@ -38,6 +43,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubeconfig) KUBECONFIG_PATH="${2:-}"; shift 2 ;;
     --context) CONTEXT_NAME="${2:-}"; shift 2 ;;
+    --mgmt-kubeconfig|--management-kubeconfig) MGMT_KUBECONFIG_PATH="${2:-}"; shift 2 ;;
+    --mgmt-context|--management-context) MGMT_CONTEXT_NAME="${2:-}"; shift 2 ;;
     --repo) REPO_URL="${2:-}"; shift 2 ;;
     --branch) BRANCH="${2:-}"; shift 2 ;;
     --workspace-namespace) WORKSPACE_NS="${2:-}"; shift 2 ;;
@@ -111,6 +118,22 @@ kc() {
   "$KUBECTL" "${args[@]}" "$@"
 }
 
+kc_mgmt() {
+  local args=()
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${MGMT_KUBECONFIG_PATH}"); fi
+  if [[ -n "${MGMT_CONTEXT_NAME}" ]]; then args+=(--context "${MGMT_CONTEXT_NAME}"); fi
+  "$KUBECTL" "${args[@]}" "$@"
+}
+
+kommander_kc() {
+  # If mgmt kubeconfig/context provided, use that for Kommander CRDs; else fall back to workload kubeconfig.
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
+    kc_mgmt "$@"
+  else
+    kc "$@"
+  fi
+}
+
 wait_for_crd() {
   local crd="$1"
   local timeout_s="${2:-600}"
@@ -131,7 +154,7 @@ resolve_clusterapp() {
   local prefix="$1"
   # ClusterApp names are typically "<app>-<version>". Choose the highest version.
   local candidates
-  candidates="$(kc get clusterapp -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep -E "^${prefix}-" || true)"
+  candidates="$(kommander_kc get clusterapp -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep -E "^${prefix}-" || true)"
   if [[ -z "$candidates" ]]; then
     return 1
   fi
@@ -149,18 +172,18 @@ enable_kommander_apps() {
   # Kommander UI typically runs on the management cluster. Many workload clusters will not have
   # Kommander CRDs like AppDeployment/ClusterApp installed locally, even if they are attached.
   local out
-  if ! out="$(kc get crd appdeployments.apps.kommander.d2iq.io -o name 2>&1)"; then
+  if ! out="$(kommander_kc get crd appdeployments.apps.kommander.d2iq.io -o name 2>&1)"; then
     if echo "$out" | grep -qi "forbidden"; then
       warn "RBAC blocked reading Kommander AppDeployment CRD (Forbidden); skipping Kommander app enablement."
       warn "If you want this automated, run with cluster-admin or enable apps via the Kommander management cluster."
       return 0
     fi
-    warn "Kommander AppDeployment CRD not found on this cluster; skipping Kommander app enablement."
-    warn "If this workload cluster is attached to Kommander, enable Istio/Kiali/Jaeger from the Kommander management plane (or provide a management kubeconfig)."
+    warn "Kommander AppDeployment CRD not found on the current kubeconfig; skipping Kommander app enablement."
+    warn "If your workload cluster is attached to Kommander, pass --mgmt-kubeconfig (management cluster) so this script can enable Istio/Kiali/Jaeger without UI clicks."
     return 0
   fi
 
-  if ! out="$(kc get crd clusterapps.apps.kommander.d2iq.io -o name 2>&1)"; then
+  if ! out="$(kommander_kc get crd clusterapps.apps.kommander.d2iq.io -o name 2>&1)"; then
     if echo "$out" | grep -qi "forbidden"; then
       warn "RBAC blocked reading Kommander ClusterApp CRD (Forbidden); skipping Kommander app enablement."
       return 0
@@ -169,7 +192,13 @@ enable_kommander_apps() {
     return 0
   fi
 
-  kc get ns "$WORKSPACE_NS" >/dev/null 2>&1 || kc create ns "$WORKSPACE_NS" >/dev/null
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
+    echo "Kommander enablement target: management kubeconfig/context"
+  else
+    echo "Kommander enablement target: workload kubeconfig/context"
+  fi
+
+  kommander_kc get ns "$WORKSPACE_NS" >/dev/null 2>&1 || kommander_kc create ns "$WORKSPACE_NS" >/dev/null
 
   local istio_app kiali_app jaeger_app
   istio_app="$(resolve_clusterapp "istio-helm" || true)"
@@ -182,7 +211,7 @@ enable_kommander_apps() {
     return 0
   fi
 
-  cat <<EOF | kc apply -f - >/dev/null
+  cat <<EOF | kommander_kc apply -f - >/dev/null
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
 metadata:
