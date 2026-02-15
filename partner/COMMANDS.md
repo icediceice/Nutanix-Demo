@@ -50,6 +50,3 @@ kubectl -n demo-app port-forward svc/frontend 8080:80
 kubectl -n demo-ops port-forward svc/demo-wall 9090:80
 kubectl -n argocd port-forward svc/argocd-server 8081:443
 ```
-
-## Legacy (Flux)
-If you still run the Flux demo chain in `flux-system`, use the previous Flux commands under `partner/demo-wall/start-demo-wall.ps1`.
