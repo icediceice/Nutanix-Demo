@@ -1,17 +1,19 @@
-# Prereqs
+# Prereqs (ArgoCD)
 
 ## Required
-- NKP cluster attached and reachable
-- Flux controllers running
-- Istio + Kiali + Grafana/Loki + Jaeger available
-- Access to this repo from cluster
-- Flux `helm-controller` available (required for Gatekeeper auto-install)
+- NKP workload cluster attached and reachable
+- Kommander components healthy
+  - Kommander internal GitOps controllers typically run in `kommander-flux`
+- ArgoCD installed in `argocd` namespace (this demo deploys via ArgoCD)
+- Istio + Kiali + Grafana/Loki + Jaeger available (Kommander-managed workload add-ons)
+- Gatekeeper installed and running
+- Image registry access to pull demo images
+  - If `ghcr.io/icediceice/otel-shop-lite-*` images are private, create `secret/ghcr-pull` in `demo-app` (see `docs/ghcr-pull-secret.md`)
 
-## Required repo variables
-- `clusters/rx-demo/flux/gitrepository.yaml`:
-  - `spec.url`
-  - `spec.ref.branch` (set desired scenario branch)
+## Required repo inputs
+- ArgoCD deploy entrypoint: `clusters/rx-demo/argocd/root`
+- Scenario control is via `scenario/*` branches (ArgoCD `Application.spec.source.targetRevision`)
 
 ## Optional
+- `clusters/rx-demo/image-automation/*`: optional v2 image auto-update (not used in the ArgoCD demo flow)
 - `platform/nkp-apps/*`: workspace-scoped AppDeployment templates
-- `clusters/rx-demo/image-automation/*`: optional v2 image auto-update
