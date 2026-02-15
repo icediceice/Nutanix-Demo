@@ -1,24 +1,24 @@
-# Partner Quickstart
+# Partner Quickstart (ArgoCD)
 
-This demo is branch-driven. No YAML edits are required during the session.
-Use `partner/COMMANDS.md` for copy/paste commands.
-For audience visualization, run `partner/demo-wall/start-demo-wall.ps1`.
-KPI/policy defaults are defined in `WOW.md`.
+This demo is branch-driven. No live YAML edits are required during the session.
+
+Use:
+- Full step-by-step: `partner/RUNBOOK.md`
+- Operator commands: `partner/COMMANDS.md`
 
 ## 1) One-time setup
-1. Update `clusters/rx-demo/flux/gitrepository.yaml` with your repo URL/branch.
-2. Apply/sync `clusters/rx-demo/flux` in your NKP cluster.
-3. Wait for Flux Kustomizations to be Ready:
-   - `platform`
-   - `apps`
-   - `mesh`
-   - `ops-loadgen`
-4. Confirm prerequisites present:
-   - Gatekeeper: `kubectl get constrainttemplates.templates.gatekeeper.sh`
-   - GHCR pull secret (if images are private): `kubectl -n demo-app get secret ghcr-pull`
+1. Install ArgoCD:
+   - `kubectl apply -k clusters/rx-demo/argocd/bootstrap`
+2. Create the demo app in ArgoCD:
+   - `kubectl apply -f clusters/rx-demo/argocd/apps/appproject.yaml`
+   - `kubectl apply -f clusters/rx-demo/argocd/apps/application.yaml`
+3. Wait for `rx-demo` to be `Synced` and `Healthy`:
+   - `kubectl -n argocd get application rx-demo -o wide`
+4. Demo Wall (in-cluster):
+   - `kubectl -n demo-ops get svc demo-wall -o wide`
 
 ## 2) Run baseline
-Switch Flux source to branch `scenario/baseline`.
+Switch ArgoCD app to branch `scenario/baseline`.
 
 Expected:
 - app healthy
@@ -37,3 +37,6 @@ Expected:
 
 ## 4) End session safely
 Switch to `scenario/load-off`.
+
+## Legacy mode
+Flux bootstrap still exists at `clusters/rx-demo/flux`, but ArgoCD is the recommended operator UI/status surface.
