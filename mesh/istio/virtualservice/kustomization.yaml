@@ -3,3 +3,4 @@ kind: Kustomization
 namespace: demo-app
 resources:
   - frontend.yaml
+  - frontend-ingress.yaml
