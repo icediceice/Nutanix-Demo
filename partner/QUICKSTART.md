@@ -5,6 +5,7 @@ This demo is branch-driven. No live YAML edits are required during the session.
 Use:
 - Full step-by-step: `partner/RUNBOOK.md`
 - Operator commands: `partner/COMMANDS.md`
+- Presenter script (what to show): `partner/showtimes.md`
 
 ## 0) Clone repo + kubeconfig
 ```bash
