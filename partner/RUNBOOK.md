@@ -4,7 +4,7 @@ This demo is branch-driven. You do not edit live YAML in the cluster during the 
 
 ## 0) Rules (avoid conflicts)
 - Use **ArgoCD** to deploy the demo (recommended).
-- Do **not** also bootstrap the Flux demo chain (`clusters/rx-demo/flux`) on the same cluster.
+- Do **not** run another GitOps controller to manage the same demo namespaces/resources on the same cluster.
 - The workload cluster should be attached to Kommander so platform add-ons (Istio/Kiali/Jaeger) can be installed.
 
 ## 1) Deploy To A New Cluster
