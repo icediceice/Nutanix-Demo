@@ -13,9 +13,9 @@ KPI/policy defaults are defined in `WOW.md`.
    - `apps`
    - `mesh`
    - `ops-loadgen`
-4. Confirm Gatekeeper auto-installed:
-   - `kubectl -n flux-system get helmrelease gatekeeper`
-   - `kubectl get constrainttemplates.templates.gatekeeper.sh`
+4. Confirm prerequisites present:
+   - Gatekeeper: `kubectl get constrainttemplates.templates.gatekeeper.sh`
+   - GHCR pull secret (if images are private): `kubectl -n demo-app get secret ghcr-pull`
 
 ## 2) Run baseline
 Switch Flux source to branch `scenario/baseline`.
