@@ -7,4 +7,4 @@ spec:
   interval: 1m0s
   url: https://github.com/icediceice/Nutanix-Demo.git
   ref:
-    branch: main
+    branch: scenario/load-off
