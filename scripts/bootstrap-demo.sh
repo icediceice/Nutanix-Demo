@@ -3,6 +3,11 @@ set -euo pipefail
 
 KUBECTL="${KUBECTL:-kubectl}"
 
+# Always run from repo root so relative paths work no matter where the operator runs the script from.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 APP_NAME="${APP_NAME:-rx-demo}"
 ARGO_NS="${ARGO_NS:-argocd}"
 WORKSPACE_NS="${WORKSPACE_NS:-kommander-default-workspace}"
