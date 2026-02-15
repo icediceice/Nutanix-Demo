@@ -28,7 +28,8 @@ spec:
           args: ["run", "/scripts/script.js"]
           env:
             - name: TARGET_URL
-              value: http://frontend.demo-app.svc.cluster.local
+              # Send traffic through the Istio ingress gateway so canary weights apply even if loadgen has no sidecar.
+              value: http://istio-helm-ingressgateway.istio-helm-gateway-ns.svc.cluster.local
             - name: SCENARIO
               value: baseline
             - name: VUS
