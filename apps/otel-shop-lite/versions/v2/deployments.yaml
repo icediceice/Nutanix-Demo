@@ -4,6 +4,12 @@ metadata:
   name: frontend-v2
 spec:
   replicas: 1
+  # Avoid temporary rollout surge that can exceed ResourceQuota during restarts/rollouts.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: frontend
@@ -55,6 +61,12 @@ metadata:
   name: catalog-api-v2
 spec:
   replicas: 1
+  # Avoid temporary rollout surge that can exceed ResourceQuota during restarts/rollouts.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: catalog-api
@@ -102,6 +114,12 @@ metadata:
   name: checkout-api-v2
 spec:
   replicas: 1
+  # Avoid temporary rollout surge that can exceed ResourceQuota during restarts/rollouts.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: checkout-api
@@ -151,6 +169,12 @@ metadata:
   name: payment-mock-v2
 spec:
   replicas: 1
+  # Avoid temporary rollout surge that can exceed ResourceQuota during restarts/rollouts.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: payment-mock
