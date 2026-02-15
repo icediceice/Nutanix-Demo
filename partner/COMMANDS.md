@@ -2,6 +2,11 @@
 
 Use this for operator copy/paste during demos.
 
+## Print all access points (recommended)
+```bash
+./scripts/print-access.sh --kubeconfig auth/workload02.conf
+```
+
 ## Prereqs
 - `kubectl` points to the target workload cluster.
 - ArgoCD installed (`argocd` namespace).
