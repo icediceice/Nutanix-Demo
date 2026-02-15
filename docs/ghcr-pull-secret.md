@@ -9,6 +9,18 @@ Notes:
 - The token needs at least `read:packages` to pull (and `write:packages` if you are pushing images).
 - Do not commit kubeconfigs/tokens to git.
 
+## Option 0: Token File (Non-Interactive)
+
+```bash
+mkdir -p auth
+printf '%s' "<GHCR_TOKEN>" > auth/ghcr.token
+chmod 600 auth/ghcr.token
+```
+
+Then either:
+- run `./scripts/bootstrap-demo.sh ... --ghcr-username icediceice --ghcr-token-file auth/ghcr.token` (preferred), or
+- export `GHCR_TOKEN="$(cat auth/ghcr.token)"` and use Option A/B below.
+
 ## Option A: Use GitHub CLI (Recommended)
 
 Login:
