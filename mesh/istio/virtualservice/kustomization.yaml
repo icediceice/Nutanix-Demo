@@ -4,3 +4,6 @@ namespace: demo-app
 resources:
   - frontend.yaml
   - frontend-ingress.yaml
+  - catalog-api.yaml
+  - checkout-api.yaml
+  - payment-mock.yaml
