@@ -146,12 +146,26 @@ enable_kommander_apps() {
     return 0
   fi
 
-  if ! kc get crd appdeployments.apps.kommander.d2iq.io >/dev/null 2>&1; then
-    warn "Kommander AppDeployment CRD not found; skipping Kommander app enablement"
+  # Kommander UI typically runs on the management cluster. Many workload clusters will not have
+  # Kommander CRDs like AppDeployment/ClusterApp installed locally, even if they are attached.
+  local out
+  if ! out="$(kc get crd appdeployments.apps.kommander.d2iq.io -o name 2>&1)"; then
+    if echo "$out" | grep -qi "forbidden"; then
+      warn "RBAC blocked reading Kommander AppDeployment CRD (Forbidden); skipping Kommander app enablement."
+      warn "If you want this automated, run with cluster-admin or enable apps via the Kommander management cluster."
+      return 0
+    fi
+    warn "Kommander AppDeployment CRD not found on this cluster; skipping Kommander app enablement."
+    warn "If this workload cluster is attached to Kommander, enable Istio/Kiali/Jaeger from the Kommander management plane (or provide a management kubeconfig)."
     return 0
   fi
-  if ! kc get crd clusterapps.apps.kommander.d2iq.io >/dev/null 2>&1; then
-    warn "Kommander ClusterApp CRD not found; skipping Kommander app enablement"
+
+  if ! out="$(kc get crd clusterapps.apps.kommander.d2iq.io -o name 2>&1)"; then
+    if echo "$out" | grep -qi "forbidden"; then
+      warn "RBAC blocked reading Kommander ClusterApp CRD (Forbidden); skipping Kommander app enablement."
+      return 0
+    fi
+    warn "Kommander ClusterApp CRD not found on this cluster; skipping Kommander app enablement"
     return 0
   fi
 
