@@ -14,6 +14,8 @@ spec:
         app: frontend
         version: v2
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-frontend:v2 # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
@@ -63,6 +65,8 @@ spec:
         app: catalog-api
         version: v2
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-catalog-api:v2 # {"$imagepolicy": "flux-system:otel-shop-catalog-api-policy"}
@@ -108,6 +112,8 @@ spec:
         app: checkout-api
         version: v2
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-checkout-api:v2 # {"$imagepolicy": "flux-system:otel-shop-checkout-api-policy"}
@@ -155,6 +161,8 @@ spec:
         app: payment-mock
         version: v2
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-payment-mock:v2 # {"$imagepolicy": "flux-system:otel-shop-payment-mock-policy"}
