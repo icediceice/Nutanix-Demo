@@ -7,15 +7,15 @@ Use:
 - Operator commands: `partner/COMMANDS.md`
 
 ## 1) One-time setup
-1. Install ArgoCD:
-   - `kubectl apply -k clusters/rx-demo/argocd/bootstrap`
-2. Create the demo app in ArgoCD:
-   - `kubectl apply -f clusters/rx-demo/argocd/apps/appproject.yaml`
-   - `kubectl apply -f clusters/rx-demo/argocd/apps/application.yaml`
-3. Wait for `rx-demo` to be `Synced` and `Healthy`:
-   - `kubectl -n argocd get application rx-demo -o wide`
-4. Demo Wall (in-cluster):
-   - `kubectl -n demo-ops get svc demo-wall -o wide`
+Run the bootstrap (fool-proof on a new workload cluster):
+- `./scripts/bootstrap-demo.sh --branch scenario/load-off`
+
+Optional (if you manage multiple kubeconfigs):
+- `./scripts/bootstrap-demo.sh --kubeconfig auth/workload02.conf --branch scenario/load-off`
+
+Verify:
+- `kubectl -n argocd get application rx-demo -o wide`
+- `kubectl -n demo-ops get svc demo-wall -o wide`
 
 ## 2) Run baseline
 Switch ArgoCD app to branch `scenario/baseline`.

@@ -25,18 +25,17 @@ echo "Cluster:"
 "$KUBECTL" config current-context
 
 echo
-echo "Flux:"
-if ! "$KUBECTL" -n flux-system get gitrepository nkp-rx-demo >/dev/null 2>&1; then
-  warn "flux-system/gitrepository nkp-rx-demo not found (did you apply clusters/rx-demo/flux?)"
-fi
-if ! "$KUBECTL" -n flux-system get kustomization platform apps mesh ops-loadgen >/dev/null 2>&1; then
-  warn "one or more Flux Kustomizations missing (platform/apps/mesh/ops-loadgen)"
+echo "ArgoCD:"
+if "$KUBECTL" -n argocd get application rx-demo >/dev/null 2>&1; then
+  "$KUBECTL" -n argocd get application rx-demo -o wide
+else
+  warn "argocd/application rx-demo not found (run ./scripts/bootstrap-demo.sh)"
 fi
 
 echo
 echo "Gatekeeper:"
 if ! "$KUBECTL" get crd constrainttemplates.templates.gatekeeper.sh >/dev/null 2>&1; then
-  fail "Gatekeeper CRDs not found (ConstraintTemplate). Install Gatekeeper before applying platform/policy."
+  warn "Gatekeeper CRDs not found (ConstraintTemplate). Policy constraints will not apply until Gatekeeper is installed."
 fi
 
 echo
@@ -53,6 +52,14 @@ if [[ "$missing_istio" -eq 1 ]]; then
 fi
 
 echo
+echo "Kommander (optional):"
+if "$KUBECTL" get crd appdeployments.apps.kommander.d2iq.io >/dev/null 2>&1; then
+  echo "AppDeployment CRD: present"
+else
+  warn "AppDeployment CRD: missing (Kommander not detected)"
+fi
+
+echo
 echo "Demo Namespaces:"
 for ns in demo-app demo-ops; do
   if ! "$KUBECTL" get ns "$ns" >/dev/null 2>&1; then
@@ -66,6 +73,19 @@ if "$KUBECTL" -n demo-app get secret ghcr-pull >/dev/null 2>&1; then
   echo "demo-app/secret ghcr-pull: present"
 else
   warn "demo-app/secret ghcr-pull: missing (required if GHCR images are private)"
+fi
+
+echo
+echo "External Access:"
+if "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway >/dev/null 2>&1; then
+  "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
+else
+  warn "istio-helm-gateway-ns/svc istio-helm-ingressgateway not found"
+fi
+if "$KUBECTL" -n demo-ops get svc demo-wall >/dev/null 2>&1; then
+  "$KUBECTL" -n demo-ops get svc demo-wall -o wide
+else
+  warn "demo-ops/svc demo-wall not found (will appear after ArgoCD sync)"
 fi
 
 echo

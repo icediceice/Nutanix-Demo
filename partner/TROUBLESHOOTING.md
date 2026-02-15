@@ -30,3 +30,15 @@
   - `kubectl -n demo-ops get svc demo-wall -o wide`
 - Check pod:
   - `kubectl -n demo-ops get pods -l app=demo-wall -o wide`
+
+## Demo app not reachable externally
+This repo routes `http://<ISTIO_INGRESS_LB_IP>/` through an Istio `Gateway` + `VirtualService`:
+- Gateway: `istio-helm-gateway-ns/gateway demo-gateway`
+- VirtualService: `demo-app/virtualservice frontend-ingress`
+
+Checks:
+- `kubectl -n istio-helm-gateway-ns get gateway demo-gateway -o yaml`
+- `kubectl -n demo-app get virtualservice frontend-ingress -o yaml`
+- `kubectl -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide`
+
+If `demo-gateway` never serves traffic, the selector in `mesh/istio/gateway/demo-gateway.yaml` may not match your ingressgateway pods.

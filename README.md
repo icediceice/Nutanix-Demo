@@ -3,10 +3,9 @@
 Simplified, branch-driven demo for NKP Rx environments.
 
 ## Recommended workflow (ArgoCD)
-1. Install ArgoCD with `clusters/rx-demo/argocd/bootstrap`.
-2. Create ArgoCD resources from `clusters/rx-demo/argocd/apps`.
-3. Switch scenarios by changing the ArgoCD Application `targetRevision` to a `scenario/*` branch.
-4. End on `scenario/load-off`.
+1. Bootstrap everything (incl. ArgoCD) with `./scripts/bootstrap-demo.sh`.
+2. Switch scenarios by changing the ArgoCD Application `targetRevision` to a `scenario/*` branch.
+3. End on `scenario/load-off`.
 
 ## Start here
 - `partner/RUNBOOK.md`

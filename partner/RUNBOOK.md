@@ -10,10 +10,26 @@ This demo is branch-driven. You do not edit live YAML in the cluster during the 
 ## 1) Deploy To A New Cluster
 Point `kubectl` at the target workload cluster (example: `workload02`).
 
-### 1.1 Install ArgoCD
+### 1.1 One-command bootstrap (recommended)
+This handles new-cluster gaps (enables Istio/Kiali/Jaeger via Kommander AppDeployment if available, installs ArgoCD, creates the ArgoCD Application, and points it at a `scenario/*` branch):
+
+```bash
+./scripts/bootstrap-demo.sh --branch scenario/load-off
+```
+
+If you use a specific kubeconfig:
+```bash
+./scripts/bootstrap-demo.sh --kubeconfig auth/workload02.conf --branch scenario/load-off
+```
+
+### 1.2 Manual bootstrap (fallback)
 ```bash
 kubectl apply -k clusters/rx-demo/argocd/bootstrap
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
+kubectl apply -f clusters/rx-demo/argocd/apps/appproject.yaml
+kubectl apply -f clusters/rx-demo/argocd/apps/application.yaml
+kubectl -n argocd patch application rx-demo --type merge -p '{"spec":{"source":{"targetRevision":"scenario/load-off"}}}'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
 ```
 
 Get ArgoCD UI address:
@@ -31,13 +47,6 @@ Login:
 - URL: `https://<ARGOCD_LB_IP>/`
 - Username: `admin`
 - Password: output from command above
-
-### 1.2 Create The Demo Application
-```bash
-kubectl apply -f clusters/rx-demo/argocd/apps/appproject.yaml
-kubectl apply -f clusters/rx-demo/argocd/apps/application.yaml
-kubectl -n argocd get application rx-demo -o wide
-```
 
 Expected: `rx-demo` becomes `Synced` and `Healthy` on branch `scenario/load-off`.
 
