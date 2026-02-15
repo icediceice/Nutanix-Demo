@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: frontend-ingress
+  namespace: demo-app
+spec:
+  gateways:
+    - istio-helm-gateway-ns/demo-gateway
+  hosts:
+    - "*"
+  http:
+    - route:
+        - destination:
+            host: frontend.demo-app.svc.cluster.local
+            subset: v1
+          weight: 100
+        - destination:
+            host: frontend.demo-app.svc.cluster.local
+            subset: v2
+          weight: 0
+
