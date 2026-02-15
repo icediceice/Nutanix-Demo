@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  kustomize-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          KVER="v5.4.2"
+          curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KVER}/kustomize_${KVER}_linux_amd64.tar.gz" -o /tmp/kustomize.tgz
+          tar -C /usr/local/bin -xzf /tmp/kustomize.tgz
+          kustomize version
+
+      - name: Render Argo root
+        run: |
+          set -euo pipefail
+          kustomize build clusters/rx-demo/argocd/root >/tmp/render-argocd.yaml
+
+      - name: Render Flux bootstrap (sanity)
+        run: |
+          set -euo pipefail
+          kustomize build clusters/rx-demo/flux >/tmp/render-flux.yaml
+
+      - name: Render top-level bundles
+        run: |
+          set -euo pipefail
+          kustomize build platform >/tmp/render-platform.yaml
+          kustomize build apps >/tmp/render-apps.yaml
+          kustomize build mesh >/tmp/render-mesh.yaml
+          kustomize build ops >/tmp/render-ops.yaml

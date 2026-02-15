@@ -16,6 +16,13 @@ No live YAML edits are required during demo sessions.
 - `partner/PREREQS.md`
 - `partner/TROUBLESHOOTING.md`
 - `partner/RESET.md`
+## Alternative: ArgoCD (UI-first CD status)
+
+If you want a clearer CD status UI than Flux, use ArgoCD:
+- Install: `clusters/rx-demo/argocd/bootstrap`
+- App definitions: `clusters/rx-demo/argocd/apps`
+- Branch-driven scenarios remain `scenario/*` (Argo `targetRevision`).
+
 
 ## Repo layout
 - `clusters/rx-demo/flux`: Flux source + Kustomization dependency chain
