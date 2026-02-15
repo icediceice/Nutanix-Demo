@@ -3,4 +3,4 @@ kind: Namespace
 metadata:
   name: demo-app
   labels:
-    istio-injection: enabled
+    istio.io/rev: istio-helm

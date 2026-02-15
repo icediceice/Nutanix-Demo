@@ -4,3 +4,4 @@ resources:
   - ../../virtualservice
 patches:
   - path: weights.yaml
+  - path: weights-ingress.yaml
