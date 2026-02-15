@@ -3,6 +3,11 @@ set -euo pipefail
 
 KUBECTL="${KUBECTL:-kubectl}"
 
+# Always run from repo root so auth/ auto-detect works no matter where the operator runs the script from.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 KUBECONFIG_PATH=""
 CONTEXT_NAME=""
 MGMT_KUBECONFIG_PATH=""

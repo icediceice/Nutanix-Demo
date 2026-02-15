@@ -1,0 +1,54 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoRequiredLabels
+metadata:
+  name: demo-required-labels
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    # Avoid dry-run blocking when the constraint CRD is being created by Gatekeeper.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment"]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoRequiredResources
+metadata:
+  name: demo-required-resources
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDemoNoLatest
+metadata:
+  name: demo-no-latest
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  enforcementAction: dryrun
+  match:
+    namespaces:
+      - demo-app
+      - demo-ops
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+
