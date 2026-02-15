@@ -91,12 +91,19 @@ spec:
       target:
         kind: Kustomization
     - patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: jaeger
-          labels:
-            kommander.d2iq.io/managed-by-kind: AppDeployment
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: jaeger
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: jaeger
       target:
-        kind: HelmRelease
-        name: jaeger
+        kind: Kustomization
+        name: jaeger-helmrelease
