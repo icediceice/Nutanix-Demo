@@ -5,9 +5,10 @@ metadata:
   namespace: istio-helm-gateway-ns
 spec:
   selector:
-    # Standard Istio label used by ingressgateway pods across many installs (including NKP Istio Helm).
+    # NKP "istio-helm" ingressgateway typically labels its pods with:
+    #   istio=istio-helm-ingressgateway
     # If your cluster differs, adjust to match the ingressgateway workload labels.
-    istio: ingressgateway
+    istio: istio-helm-ingressgateway
   servers:
     - port:
         number: 80
