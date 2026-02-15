@@ -5,6 +5,12 @@ metadata:
   namespace: demo-ops
 spec:
   replicas: 1
+  # Avoid temporary rollout surge that can exceed ResourceQuota during scenario switches.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: demo-loadgen
@@ -12,6 +18,9 @@ spec:
     metadata:
       labels:
         app: demo-loadgen
+      annotations:
+        # Loadgen does not need a sidecar; disabling injection avoids extra CPU/memory and prevents quota issues.
+        sidecar.istio.io/inject: "false"
     spec:
       containers:
         - name: k6
