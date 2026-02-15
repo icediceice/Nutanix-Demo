@@ -8,6 +8,21 @@ This demo is branch-driven. You do not edit live YAML in the cluster during the 
 - The workload cluster should be attached to Kommander so platform add-ons (Istio/Kiali/Jaeger) can be installed.
 
 ## 1) Deploy To A New Cluster
+### 1.0 Clone repo + kubeconfig
+```bash
+git clone https://github.com/icediceice/Nutanix-Demo.git
+cd Nutanix-Demo
+mkdir -p auth
+```
+
+Place your workload cluster kubeconfig at:
+- `auth/workload02.conf`
+
+Sanity check:
+```bash
+kubectl --kubeconfig auth/workload02.conf get nodes
+```
+
 Point `kubectl` at the target workload cluster (example: `workload02`).
 
 ### 1.1 One-command bootstrap (recommended)
