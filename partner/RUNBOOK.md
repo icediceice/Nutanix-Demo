@@ -6,6 +6,7 @@ This demo is branch-driven. You do not edit live YAML in the cluster during the 
 - Use **ArgoCD** to deploy the demo (recommended).
 - Do **not** run another GitOps controller to manage the same demo namespaces/resources on the same cluster.
 - The workload cluster should be attached to Kommander so platform add-ons (Istio/Kiali/Jaeger) can be installed.
+- Do **not** open/merge GitHub PRs from `scenario/*` into `main` (GitHub may suggest "Compare & pull request" after pushes). `scenario/*` are demo runtime states.
 
 ## 1) Deploy To A New Cluster
 ### 1.0 Clone repo + kubeconfig
