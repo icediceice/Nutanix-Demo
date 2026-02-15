@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 Provide a branch-driven, repeatable partner demo for NKP Rx that shows:
-- GitOps operations with ArgoCD (recommended) or Flux (legacy)
+- GitOps operations with ArgoCD
 - Progressive delivery with Istio canary routing
 - Incident simulation and observability triage
 - Governance posture with Gatekeeper policy in audit mode
@@ -18,8 +18,8 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 - End every session in a safe low-cost state (`scenario/load-off`).
 
 ## 3. Scope By Folder
-- `clusters/rx-demo/flux`: Flux source and reconciliation chain (`platform -> apps -> mesh -> ops-loadgen`) plus optional suspended `image-automation`.
-- `clusters/rx-demo/image-automation`: Optional Flux image scanning/policy/automation for v2 manifests (Setters strategy).
+- `clusters/rx-demo/argocd`: ArgoCD bootstrap + Application (operator UI)
+- `clusters/rx-demo/image-automation`: Optional image scanning/policy/automation for v2 manifests (not used in the ArgoCD demo flow).
 - `platform`: Namespaces, RBAC, quotas/limits, dry-run policy constraints, optional NKP `AppDeployment` templates.
 - `apps`: `otel-shop-lite` service manifests, v1/v2 deployments, incident overlays, and Python app source.
 - `mesh`: Istio `DestinationRule` and `VirtualService` overlays for traffic weights and optional mirroring.
@@ -95,13 +95,12 @@ Branch switching is the demo control plane (`partner/SCENARIOS.md`):
 
 ## 9. Demo Wall and KPI Contract
 Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
-- Scenario branch, Flux artifact revision, GitRepository readiness
-- Flux Kustomization readiness table
+- Scenario branch, CD revision, CD sync/health
 - Loadgen desired/ready replicas
 - Canary weights (v1/v2)
 - Policy summary (pass/warn/fail/error)
 - KPI cards:
-  - Flux Success Rate (good >= 90, warn >= 70, bad < 70)
+  - CD Success Rate (good when `Synced`+`Healthy`)
   - Canary Weight v2 (informational)
   - Policy Compliance (good >= 95, warn >= 60, bad < 60 in implementation)
   - Rollback SLA Target (`< 3 minutes`, target card)
@@ -109,7 +108,7 @@ Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
 ## 10. End-to-End Demo Script
 1. Preflight:
    - Validate prereqs (`partner/PREREQS.md`, `docs/verification-checklist.md`).
-   - Set Flux repo URL/branch via `partner/COMMANDS.md`.
+   - Confirm ArgoCD `rx-demo` is `Synced` and `Healthy`.
 2. Baseline:
    - Run `scenario/baseline`; confirm healthy app and baseline traffic.
 3. Progressive delivery:

@@ -24,7 +24,4 @@ kubectl -n demo-ops port-forward svc/demo-wall 9090:80
 Open: `http://localhost:9090`
 
 ## Legacy (local script)
-The local PowerShell script is Flux-oriented and kept for backwards compatibility:
-```powershell
-powershell -ExecutionPolicy Bypass -File .\partner\demo-wall\start-demo-wall.ps1
-```
+The local PowerShell script (`partner/demo-wall/start-demo-wall.ps1`) is not used in the ArgoCD demo.
