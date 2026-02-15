@@ -70,7 +70,8 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
   - Disallow `:latest` tag
 
 ## 7. Traffic and Load Controls
-- Istio baseline starts at `weight-0` overlay (100% v1 / 0% v2).
+- Istio baseline starts at `weight-0` overlay (100% v1 / 0% v2) for the **frontend** entrypoint.
+- Downstream services (`catalog-api`, `checkout-api`, `payment-mock`) use version-affine routing based on the caller labels (frontend v1 calls v1; frontend v2 calls v2). This keeps the canary request path consistent.
 - Canary overlays:
   - `weight-10` (90/10)
   - `weight-50` (50/50)
