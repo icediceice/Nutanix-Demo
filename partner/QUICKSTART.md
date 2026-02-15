@@ -6,6 +6,23 @@ Use:
 - Full step-by-step: `partner/RUNBOOK.md`
 - Operator commands: `partner/COMMANDS.md`
 
+## 0) Clone repo + kubeconfig
+```bash
+git clone https://github.com/icediceice/Nutanix-Demo.git
+cd Nutanix-Demo
+mkdir -p auth
+```
+
+Place your workload cluster kubeconfig at:
+- `auth/workload02.conf`
+
+Example usage:
+```bash
+kubectl --kubeconfig auth/workload02.conf get nodes
+```
+
+Note: `auth/` is intentionally ignored by git.
+
 ## 1) One-time setup
 Run the bootstrap (fool-proof on a new workload cluster):
 - `./scripts/bootstrap-demo.sh --branch scenario/load-off`
