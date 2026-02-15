@@ -13,6 +13,11 @@ cd Nutanix-Demo
 mkdir -p auth
 ```
 
+If `kubectl` is not installed:
+```bash
+./scripts/install-kubectl.sh
+```
+
 Place your workload cluster kubeconfig at:
 - `auth/workload02.conf`
 
