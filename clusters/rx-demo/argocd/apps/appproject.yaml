@@ -6,6 +6,7 @@ metadata:
 spec:
   description: NKP Rx demo project
   sourceRepos:
+    - https://github.com/icediceice/Nutanix-Demo
     - https://github.com/icediceice/Nutanix-Demo.git
   destinations:
     - namespace: '*'
