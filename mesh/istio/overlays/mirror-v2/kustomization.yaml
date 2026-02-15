@@ -4,3 +4,4 @@ resources:
   - ../../virtualservice
 patches:
   - path: mirror.yaml
+  - path: mirror-ingress.yaml

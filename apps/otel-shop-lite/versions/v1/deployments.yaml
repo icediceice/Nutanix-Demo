@@ -14,6 +14,8 @@ spec:
         app: frontend
         version: v1
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-frontend:v1
@@ -63,6 +65,8 @@ spec:
         app: catalog-api
         version: v1
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-catalog-api:v1
@@ -108,6 +112,8 @@ spec:
         app: checkout-api
         version: v1
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-checkout-api:v1
@@ -155,6 +161,8 @@ spec:
         app: payment-mock
         version: v1
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: app
           image: ghcr.io/icediceice/otel-shop-lite-payment-mock:v1

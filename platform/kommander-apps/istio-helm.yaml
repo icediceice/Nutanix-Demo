@@ -1,0 +1,176 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: istio-helm
+  namespace: kommander-default-workspace
+  labels:
+    kustomize.toolkit.fluxcd.io/name: apps-kommander-default-workspace
+    kustomize.toolkit.fluxcd.io/namespace: kommander-default-workspace
+    nkp.nutanix.com/app-id: istio-helm
+    nkp.nutanix.com/app-ref: istio-helm-1.23.6
+    nkp.nutanix.com/kustomization-type: appdeployment
+  annotations:
+    config.kubernetes.io/origin: |
+      path: management/istio-helm/istio-helm.yaml
+spec:
+  interval: 6h
+  retryInterval: 1m
+  timeout: 10m
+  wait: true
+  prune: true
+  force: false
+  path: ./applications/istio-helm/1.23.6
+  sourceRef:
+    kind: GitRepository
+    name: management
+    namespace: kommander-flux
+  postBuild:
+    substitute:
+      appName: istio-helm
+      appVersion: 1.23.6
+      releaseName: istio-helm
+      releaseNamespace: kommander-default-workspace
+      workspaceNamespace: kommander-default-workspace
+      caIssuerName: kommander-ca
+  patches:
+    - patch: |2-
+
+        kind: OCIRepository
+        metadata:
+          name: not-used
+          labels:
+            nkp.nutanix.com/oci-config-patched: "true"
+        spec:
+          proxySecretRef:
+            name: nkp-oci-proxy
+          certSecretRef:
+            name: nkp-oci-proxy-ca
+      target:
+        kind: OCIRepository
+    - patch: |
+        - op: add
+          path: /spec/patches
+          value: []
+      target:
+        kind: Kustomization
+        labelSelector: '!nkp.nutanix.com/kustomization-has-patches'
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |2-
+
+              kind: OCIRepository
+              metadata:
+                name: not-used
+                labels:
+                  nkp.nutanix.com/oci-config-patched: "true"
+              spec:
+                proxySecretRef:
+                  name: nkp-oci-proxy
+                certSecretRef:
+                  name: nkp-oci-proxy-ca
+            target:
+              kind: OCIRepository
+      target:
+        kind: Kustomization
+    - patch: |
+        kind: Kustomization
+        metadata:
+          name: not-used
+        spec:
+          postBuild:
+            substitute:
+              appName: istio-helm
+              appVersion: 1.23.6
+              releaseName: istio-helm
+              releaseNamespace: kommander-default-workspace
+              workspaceNamespace: kommander-default-workspace
+              caIssuerName: kommander-ca
+      target:
+        kind: Kustomization
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-base
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-base
+      target:
+        kind: Kustomization
+        name: istio-helm-helmrelease
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-cni
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-cni
+      target:
+        kind: Kustomization
+        name: istio-helm-helmrelease
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-istiod
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-istiod
+      target:
+        kind: Kustomization
+        name: istio-helm-helmrelease
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-ztunnel
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-ztunnel
+      target:
+        kind: Kustomization
+        name: istio-helm-helmrelease
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |
+              apiVersion: helm.toolkit.fluxcd.io/v2
+              kind: HelmRelease
+              metadata:
+                name: istio-helm-gateway
+                labels:
+                  kommander.d2iq.io/managed-by-kind: AppDeployment
+            target:
+              kind: HelmRelease
+              name: istio-helm-gateway
+      target:
+        kind: Kustomization
+        name: istio-helm-helmrelease
