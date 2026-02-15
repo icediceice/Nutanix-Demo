@@ -30,10 +30,10 @@ Note: `auth/` is intentionally ignored by git.
 
 ## 1) One-time setup
 Run the bootstrap (fool-proof on a new workload cluster):
-- `./scripts/bootstrap-demo.sh --branch scenario/load-off`
-
-Optional (if you manage multiple kubeconfigs):
 - `./scripts/bootstrap-demo.sh --kubeconfig auth/workload02.conf --branch scenario/load-off`
+
+Optional (print all URLs once it is up):
+- `./scripts/print-access.sh --kubeconfig auth/workload02.conf`
 
 Verify:
 - `kubectl -n argocd get application rx-demo -o wide`
