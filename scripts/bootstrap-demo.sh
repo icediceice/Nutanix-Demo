@@ -322,11 +322,47 @@ EOF
   fi
 }
 
+maybe_suspend_demo_flux() {
+  # If Flux demo objects exist (from older demo versions), they will fight with ArgoCD over the same resources.
+  # We do not uninstall Flux; we only suspend the demo-specific Kustomizations if they exist.
+  if ! kc get crd kustomizations.kustomize.toolkit.fluxcd.io >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local ns="flux-system"
+  if ! kc get ns "${ns}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local -a ks=(platform apps mesh ops-loadgen)
+  local found=0
+
+  for k in "${ks[@]}"; do
+    if kc -n "${ns}" get kustomization "${k}" >/dev/null 2>&1; then
+      found=1
+      local suspended
+      suspended="$(kc -n "${ns}" get kustomization "${k}" -o jsonpath='{.spec.suspend}' 2>/dev/null || true)"
+      if [[ "${suspended}" != "true" ]]; then
+        warn "Detected Flux Kustomization ${ns}/${k} (not suspended). Suspending to avoid conflicts with ArgoCD demo."
+        kc -n "${ns}" patch kustomization "${k}" --type merge -p '{"spec":{"suspend":true}}' >/dev/null || true
+      else
+        warn "Detected Flux Kustomization ${ns}/${k} (already suspended)."
+      fi
+    fi
+  done
+
+  if [[ "${found}" -eq 1 ]]; then
+    warn "Flux demo objects were found under ${ns}. This demo runs via ArgoCD; keep these suspended (or delete them) to avoid drift/OutOfSync."
+  fi
+}
+
 autodetect_kubeconfig
 
 echo "Target cluster:"
 kc cluster-info >/dev/null
 kc config current-context
+
+maybe_suspend_demo_flux
 
 enable_kommander_apps
 
