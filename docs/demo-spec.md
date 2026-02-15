@@ -20,7 +20,7 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 ## 3. Scope By Folder
 - `clusters/rx-demo/flux`: Flux source and reconciliation chain (`platform -> apps -> mesh -> ops-loadgen`) plus optional suspended `image-automation`.
 - `clusters/rx-demo/image-automation`: Optional Flux image scanning/policy/automation for v2 manifests (Setters strategy).
-- `platform`: Namespaces, RBAC, quotas/limits, Gatekeeper Helm install, dry-run policy constraints, optional NKP `AppDeployment` templates.
+- `platform`: Namespaces, RBAC, quotas/limits, dry-run policy constraints, optional NKP `AppDeployment` templates.
 - `apps`: `otel-shop-lite` service manifests, v1/v2 deployments, incident overlays, and Python app source.
 - `mesh`: Istio `DestinationRule` and `VirtualService` overlays for traffic weights and optional mirroring.
 - `ops`: k6 load generator base and overlays (`baseline`, `peak`, `off`).
@@ -53,7 +53,7 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
   - HTTP response headers include trace/span IDs
 
 ## 6. Platform Guardrails
-- Namespaces: `demo-app`, `demo-ops`; Istio injection enabled on `demo-app`.
+- Namespaces: `demo-app`, `demo-ops`; Istio revision label applied (default `istio.io/rev=istio-helm`).
 - RBAC:
   - `demo-dev-role` in `demo-app`
   - `demo-ops-role` in `demo-app` and `demo-ops`
@@ -62,7 +62,7 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
   - `demo-app`: up to 40 pods, 4 CPU requests / 8 CPU limits, 4Gi / 8Gi memory
   - `demo-ops`: up to 20 pods, 2 CPU requests / 4 CPU limits, 2Gi / 4Gi memory
 - Gatekeeper:
-  - Installed via Flux HelmRelease (`gatekeeper-system`, chart `3.*`)
+  - Assumed to be installed already (Kommander typically installs this)
   - Constraints are `enforcementAction: dryrun` for non-blocking demos
 - Policy bundle in `platform/policy/demo-guardrails.yaml`:
   - Required labels: `app`, `version`
