@@ -1,9 +1,9 @@
 # KPI Assets
 
-KPI source of truth is `WOW.md` plus live values from `partner/demo-wall/start-demo-wall.ps1`.
+KPI source of truth is `WOW.md` plus live values from the in-cluster Demo Wall (`ops/demo-wall`).
 
 Current KPI cards:
-- Flux Success Rate
+- CD Success Rate
 - Canary Weight v2
 - Policy Compliance
 - Rollback SLA Target
