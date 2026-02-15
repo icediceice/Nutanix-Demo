@@ -1,0 +1,114 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kiali
+  namespace: kommander-default-workspace
+  labels:
+    kustomize.toolkit.fluxcd.io/name: apps-kommander-default-workspace
+    kustomize.toolkit.fluxcd.io/namespace: kommander-default-workspace
+    nkp.nutanix.com/app-id: kiali
+    nkp.nutanix.com/app-ref: kiali-2.18.0
+    nkp.nutanix.com/kustomization-type: appdeployment
+  annotations:
+    config.kubernetes.io/origin: |
+      path: management/kiali/kiali.yaml
+spec:
+  interval: 6h
+  retryInterval: 1m
+  timeout: 10m
+  wait: true
+  prune: true
+  force: false
+  dependsOn:
+    - name: istio-helm
+      namespace: kommander-default-workspace
+    - name: jaeger
+      namespace: kommander-default-workspace
+  path: ./applications/kiali/2.18.0
+  sourceRef:
+    kind: GitRepository
+    name: management
+    namespace: kommander-flux
+  postBuild:
+    substitute:
+      appName: kiali
+      appVersion: 2.18.0
+      releaseName: kiali
+      releaseNamespace: kommander-default-workspace
+      workspaceNamespace: kommander-default-workspace
+  patches:
+    - patch: |2-
+
+        kind: OCIRepository
+        metadata:
+          name: not-used
+          labels:
+            nkp.nutanix.com/oci-config-patched: "true"
+        spec:
+          proxySecretRef:
+            name: nkp-oci-proxy
+          certSecretRef:
+            name: nkp-oci-proxy-ca
+      target:
+        kind: OCIRepository
+    - patch: |
+        - op: add
+          path: /spec/patches
+          value: []
+      target:
+        kind: Kustomization
+        labelSelector: '!nkp.nutanix.com/kustomization-has-patches'
+    - patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            patch: |2-
+
+              kind: OCIRepository
+              metadata:
+                name: not-used
+                labels:
+                  nkp.nutanix.com/oci-config-patched: "true"
+              spec:
+                proxySecretRef:
+                  name: nkp-oci-proxy
+                certSecretRef:
+                  name: nkp-oci-proxy-ca
+            target:
+              kind: OCIRepository
+      target:
+        kind: Kustomization
+    - patch: |
+        kind: Kustomization
+        metadata:
+          name: not-used
+        spec:
+          postBuild:
+            substitute:
+              appName: kiali
+              appVersion: 2.18.0
+              releaseName: kiali
+              releaseNamespace: kommander-default-workspace
+              workspaceNamespace: kommander-default-workspace
+      target:
+        kind: Kustomization
+    - patch: |
+        - op: add
+          path: /spec/valuesFrom/-
+          value:
+            kind: ConfigMap
+            name: kiali-overrides
+            optional: true
+      target:
+        kind: HelmRelease
+        name: kiali
+    - patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: kiali
+          labels:
+            kommander.d2iq.io/managed-by-kind: AppDeployment
+      target:
+        kind: HelmRelease
+        name: kiali
