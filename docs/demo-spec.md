@@ -34,7 +34,7 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 2. ArgoCD applies `platform`, `apps`, `mesh`, `ops` (including demo-wall and loadgen).
 3. Application runs in `demo-app` namespace with frontend, catalog, checkout, payment services (v1 and v2).
 4. Istio routes `frontend` service traffic across subsets `v1` and `v2`.
-5. k6 in `demo-ops` continuously drives storefront and checkout traffic.
+5. k6 in `demo-ops` continuously drives storefront and checkout traffic (via the Istio ingress gateway service) so canary weights apply without requiring a sidecar on the load generator.
 6. OpenTelemetry traces go to Jaeger collector; app exposes Prometheus metrics and JSON logs with trace IDs.
 7. Gatekeeper audits policy conformance (labels, resources, no `:latest`) in demo namespaces.
 8. Demo Wall polls Kubernetes read-only and renders branch, readiness, canary, policy, and KPI cards.

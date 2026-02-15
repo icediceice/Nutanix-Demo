@@ -45,3 +45,9 @@ Checks:
 - `kubectl -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide`
 
 If `demo-gateway` never serves traffic, the selector in `mesh/istio/gateway/demo-gateway.yaml` may not match your ingressgateway pods.
+
+## Canary weights look wrong (traffic still hits v2 at weight-0)
+- Check weights:
+  - `kubectl -n demo-app get virtualservice frontend frontend-ingress -o yaml`
+- If the in-cluster load generator (`demo-ops/demo-loadgen`) is configured to hit `frontend.demo-app.svc.cluster.local` directly and has no Istio sidecar, Kubernetes will load-balance across v1/v2 endpoints and you will see traffic go to v2 even when canary is 0%.
+- Preferred: loadgen targets the Istio ingress gateway service so `frontend-ingress` weights are applied.
