@@ -4,7 +4,7 @@ metadata:
   name: frontend-gateway
   namespace: demo-app
 spec:
-  # Use the Kommander-installed Istio ingress gateway on workload01.
+  # Use the Kommander-installed Istio ingress gateway on workload clusters.
   selector:
     istio: istio-helm-ingressgateway
   servers:
@@ -13,5 +13,4 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        # Resolves to the current ingress LB IP (10.136.227.59).
-        - frontend.10.136.227.59.sslip.io
+        - "*"

@@ -15,3 +15,21 @@ spec:
         subset: v2
       mirrorPercentage:
         value: 100
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: frontend-ingress
+  namespace: demo-app
+spec:
+  http:
+    - route:
+        - destination:
+            host: frontend.demo-app.svc.cluster.local
+            subset: v1
+          weight: 100
+      mirror:
+        host: frontend.demo-app.svc.cluster.local
+        subset: v2
+      mirrorPercentage:
+        value: 100
