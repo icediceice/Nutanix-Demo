@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rx-demo
+  namespace: argocd
+spec:
+  project: rx-demo
+  source:
+    repoURL: https://github.com/icediceice/Nutanix-Demo.git
+    targetRevision: scenario/load-off
+    path: clusters/rx-demo/argocd/root
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
