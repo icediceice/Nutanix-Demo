@@ -19,20 +19,59 @@ data:
 
     const target = __ENV.TARGET_URL || "http://frontend.demo-app.svc.cluster.local";
     const scenario = __ENV.SCENARIO || "baseline";
+    const skus = ["sku-1", "sku-2", "sku-3"];
 
-    export default function () {
-      const headers = {
+    function shopperHeaders() {
+      return {
         "X-Demo-Scenario": scenario,
         "User-Agent": "nkp-demo-loadgen",
         "Content-Type": "application/json",
       };
+    }
 
-      const home = http.get(`${target}/`, { headers });
+    function viewHome(headers) {
+      const home = http.get(`${target}/`, { headers, tags: { flow: "browse", step: "home" } });
       check(home, { "home status is 200": (r) => r.status === 200 });
+    }
 
-      const payload = JSON.stringify({ order_id: `order-${__VU}-${__ITER}` });
-      const checkout = http.post(`${target}/checkout`, payload, { headers });
-      check(checkout, { "checkout responded": (r) => r.status >= 200 && r.status < 600 });
+    function viewCatalog(headers) {
+      const catalog = http.get(`${target}/catalog`, { headers, tags: { flow: "browse", step: "catalog" } });
+      check(catalog, { "catalog status is 200": (r) => r.status === 200 });
+    }
 
-      sleep(1);
+    function viewProduct(headers) {
+      const sku = skus[Math.floor(Math.random() * skus.length)];
+      const product = http.get(`${target}/product/${sku}`, { headers, tags: { flow: "browse", step: "product" } });
+      check(product, { "product status is 200": (r) => r.status === 200 });
+    }
+
+    function runCheckout(headers, runs) {
+      for (let i = 0; i < runs; i += 1) {
+        const payload = JSON.stringify({ order_id: `order-${__VU}-${__ITER}-${i}` });
+        const checkout = http.post(`${target}/checkout`, payload, { headers, tags: { flow: "checkout", step: "checkout" } });
+        check(checkout, { "checkout responded": (r) => r.status >= 200 && r.status < 600 });
+      }
+    }
+
+    export default function () {
+      const headers = shopperHeaders();
+      const roll = Math.random();
+
+      viewHome(headers);
+      viewCatalog(headers);
+      viewProduct(headers);
+
+      // Weighted journey mix for more realistic storefront behavior:
+      // 65% browse only, 25% browse+single checkout, 10% flash-sale burst.
+      if (roll < 0.65) {
+        if (Math.random() < 0.4) {
+          viewProduct(headers);
+        }
+      } else if (roll < 0.90) {
+        runCheckout(headers, 1);
+      } else {
+        runCheckout(headers, 3);
+      }
+
+      sleep(0.5 + Math.random() * 1.5);
     }
