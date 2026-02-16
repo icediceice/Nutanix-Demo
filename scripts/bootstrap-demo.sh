@@ -21,6 +21,7 @@ Usage:
   ./scripts/bootstrap-demo.sh [--kubeconfig PATH] [--context NAME] [--branch scenario/*] [--repo URL]
                              [--workspace-namespace NS] [--skip-kommander-apps]
                              [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
+                             [--workload-cluster-name NAME]
                              [--ghcr-username USER] [--ghcr-token-file PATH]
 
 What it does:
@@ -41,6 +42,7 @@ KUBECONFIG_PATH=""
 CONTEXT_NAME=""
 MGMT_KUBECONFIG_PATH=""
 MGMT_CONTEXT_NAME=""
+WORKLOAD_CLUSTER_NAME=""
 REPO_URL="$REPO_URL_DEFAULT"
 BRANCH="$BRANCH_DEFAULT"
 SKIP_KOMMANDER_APPS=0
@@ -53,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     --context) CONTEXT_NAME="${2:-}"; shift 2 ;;
     --mgmt-kubeconfig|--management-kubeconfig) MGMT_KUBECONFIG_PATH="${2:-}"; shift 2 ;;
     --mgmt-context|--management-context) MGMT_CONTEXT_NAME="${2:-}"; shift 2 ;;
+    --workload-cluster-name) WORKLOAD_CLUSTER_NAME="${2:-}"; shift 2 ;;
     --repo) REPO_URL="${2:-}"; shift 2 ;;
     --branch) BRANCH="${2:-}"; shift 2 ;;
     --workspace-namespace) WORKSPACE_NS="${2:-}"; shift 2 ;;
@@ -228,6 +231,46 @@ resolve_clusterapp() {
   echo "$candidates" | awk -v p="${prefix}-" '{v=$0; sub(p,"",v); print v "\t" $0}' | sort -V | tail -n 1 | awk '{print $2}'
 }
 
+infer_workload_cluster_name() {
+  if [[ -n "${WORKLOAD_CLUSTER_NAME}" ]]; then
+    return 0
+  fi
+
+  # Best signal when available.
+  local from_label
+  from_label="$(kc get ns kube-system -o jsonpath='{.metadata.labels.kommander\.d2iq\.io/cluster-name}' 2>/dev/null || true)"
+  if [[ -n "${from_label}" ]]; then
+    WORKLOAD_CLUSTER_NAME="${from_label}"
+    return 0
+  fi
+
+  # Common kubeconfig context format: user@cluster-name
+  local ctx
+  ctx="$(kc config current-context 2>/dev/null || true)"
+  if [[ -n "${ctx}" ]]; then
+    if [[ "${ctx}" == *@* ]]; then
+      WORKLOAD_CLUSTER_NAME="${ctx##*@}"
+    else
+      WORKLOAD_CLUSTER_NAME="${ctx}"
+    fi
+  fi
+
+  if [[ -z "${WORKLOAD_CLUSTER_NAME}" ]]; then
+    fail "Could not infer workload cluster name from kubeconfig. Re-run with --workload-cluster-name <name>."
+  fi
+}
+
+validate_workload_cluster_name() {
+  # Ensure the selector will match a joined cluster in this workspace.
+  if kommander_kc -n "${WORKSPACE_NS}" get kommandercluster "${WORKLOAD_CLUSTER_NAME}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local known
+  known="$(kommander_kc -n "${WORKSPACE_NS}" get kommandercluster -o jsonpath='{range .items[*]}{.metadata.name}{" "}{end}' 2>/dev/null || true)"
+  fail "KommanderCluster '${WORKLOAD_CLUSTER_NAME}' was not found in workspace namespace '${WORKSPACE_NS}'. Known clusters: ${known:-none}. Re-run with --workload-cluster-name <name> and correct --workspace-namespace."
+}
+
 enable_kommander_apps() {
   if [[ "$SKIP_KOMMANDER_APPS" -eq 1 ]]; then
     warn "Skipping Kommander app enablement (--skip-kommander-apps)"
@@ -276,6 +319,14 @@ enable_kommander_apps() {
     return 0
   fi
 
+  infer_workload_cluster_name
+  validate_workload_cluster_name
+
+  local istio_ver kiali_ver jaeger_ver
+  istio_ver="${istio_app#istio-helm-}"
+  kiali_ver="${kiali_app#kiali-}"
+  jaeger_ver="${jaeger_app#jaeger-}"
+
   cat <<EOF | kommander_kc apply -f - >/dev/null
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -286,6 +337,21 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${istio_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${istio_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 ---
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -296,6 +362,21 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${kiali_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${kiali_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 ---
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -306,9 +387,25 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${jaeger_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${jaeger_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 EOF
 
   echo "Kommander apps requested via AppDeployment in namespace: ${WORKSPACE_NS}"
+  echo "  selector:  ${WORKLOAD_CLUSTER_NAME}"
   echo "  istio-helm: ${istio_app}"
   echo "  kiali:     ${kiali_app}"
   echo "  jaeger:    ${jaeger_app}"
