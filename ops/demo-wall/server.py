@@ -280,6 +280,7 @@ def build_quick_links():
     argocd_pass = os.environ.get("ARGOCD_PASSWORD", "")
 
     kommander_ingress_base = ""
+    kommander_ingress_probe = ""
     kommander_platform_base = os.environ.get("KOMMANDER_PLATFORM_BASE", "")
     kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
     if "_error" not in kommander_traefik:
@@ -290,10 +291,21 @@ def build_quick_links():
         if host:
             kommander_ingress_base = f"https://{host}"
 
+        # Prefer probing via ClusterIP to avoid "hairpin" issues reaching the LoadBalancer IP from pods.
+        cluster_ip = get_nested(kommander_traefik, ["spec", "clusterIP"], "")
+        if cluster_ip and str(cluster_ip).lower() != "none":
+            port = _service_port(kommander_traefik, preferred_ports=[443, 80])
+            scheme = "https" if int(port or 0) == 443 else "http"
+            if port and ((scheme == "https" and port == 443) or (scheme == "http" and port == 80)):
+                kommander_ingress_probe = f"{scheme}://{cluster_ip}/dkp/kubernetes"
+            elif port:
+                kommander_ingress_probe = f"{scheme}://{cluster_ip}:{port}/dkp/kubernetes"
+
     # Try to discover the management-cluster platform hostname from the SSO redirect.
     # This lets us publish a valid, browser-friendly Kommander UI URL (sslip) instead of an IP/404 root.
-    if not kommander_platform_base and kommander_ingress_base:
-        loc = _http_location(f"{kommander_ingress_base}/dkp/kubernetes", insecure_tls=True)
+    if not kommander_platform_base and (kommander_ingress_probe or kommander_ingress_base):
+        probe = kommander_ingress_probe or f"{kommander_ingress_base}/dkp/kubernetes"
+        loc = _http_location(probe, insecure_tls=True)
         kommander_platform_base = _url_base(loc)
 
     # Demo app
