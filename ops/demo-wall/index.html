@@ -238,11 +238,18 @@
           card.appendChild(hint);
         }
 
-        if (link.access) {
-          const access = document.createElement("div");
-          access.className = "hint";
-          access.textContent = `Access: ${link.access}`;
-          card.appendChild(access);
+        if (link.username) {
+          const user = document.createElement("div");
+          user.className = "hint";
+          user.textContent = `Username: ${link.username}`;
+          card.appendChild(user);
+        }
+
+        if (link.password) {
+          const pass = document.createElement("pre");
+          pass.className = "cmd";
+          pass.textContent = `Password: ${link.password}`;
+          card.appendChild(pass);
         }
 
         if (link.command) {
