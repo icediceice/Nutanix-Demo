@@ -19,6 +19,17 @@ Default is set in:
 If your Prometheus service name differs, change `serverAddress` in:
 - `apps/otel-shop-lite/overlays/keda-checkout/keda-prometheus-configmap.yaml`
 
+### Automatic Discovery (Optional)
+You can try best-effort endpoint discovery and apply it to the cluster:
+```bash
+./scripts/discover-prometheus.sh --apply
+```
+
+If you bootstrap directly into the KEDA scenario, you can also add:
+```bash
+./scripts/bootstrap-demo.sh ... --branch scenario/keda-checkout --discover-prometheus
+```
+
 ## Validate In Cluster
 1. Switch ArgoCD `rx-demo` to `scenario/keda-checkout` and wait for sync.
 2. Confirm KEDA is running:

@@ -23,6 +23,7 @@ Usage:
                              [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
                              [--workload-cluster-name NAME]
                              [--ghcr-username USER] [--ghcr-token-file PATH]
+                             [--discover-prometheus]
 
 What it does:
   1) (Optional) Enables required Kommander apps (Istio/Kiali/Jaeger) via AppDeployment (no UI clicks).
@@ -31,6 +32,8 @@ What it does:
   2) Installs ArgoCD (LoadBalancer service) from clusters/rx-demo/argocd/bootstrap.
   3) Creates ArgoCD AppProject + Application and points it at a scenario branch.
   4) Prints the URLs/commands to access ArgoCD, the Demo App, and Demo Wall.
+  5) (Optional) If --discover-prometheus is set and you are using a KEDA scenario branch, attempts to auto-set
+     demo-app/ConfigMap keda-prometheus to a reachable Prometheus endpoint.
 EOF
 }
 
@@ -48,6 +51,7 @@ BRANCH="$BRANCH_DEFAULT"
 SKIP_KOMMANDER_APPS=0
 GHCR_USERNAME_ARG=""
 GHCR_TOKEN_FILE=""
+DISCOVER_PROMETHEUS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -62,6 +66,7 @@ while [[ $# -gt 0 ]]; do
     --skip-kommander-apps) SKIP_KOMMANDER_APPS=1; shift 1 ;;
     --ghcr-username) GHCR_USERNAME_ARG="${2:-}"; shift 2 ;;
     --ghcr-token-file) GHCR_TOKEN_FILE="${2:-}"; shift 2 ;;
+    --discover-prometheus) DISCOVER_PROMETHEUS=1; shift 1 ;;
     -h|--help) usage; exit 0 ;;
     *) fail "unknown arg: $1 (use --help)" ;;
   esac
@@ -191,6 +196,28 @@ ensure_ghcr_pull_secret() {
     --dry-run=client -o yaml | kc apply -f - >/dev/null
 
   echo "${ns}/secret ${secret}: applied"
+}
+
+maybe_set_keda_prometheus_endpoint() {
+  # Best-effort only. Requires the discovery script and a KEDA scenario branch.
+  if [[ "${DISCOVER_PROMETHEUS}" -ne 1 ]]; then
+    return 0
+  fi
+  if [[ "${BRANCH}" != scenario/keda-* ]]; then
+    return 0
+  fi
+  if [[ ! -f "${SCRIPT_DIR}/discover-prometheus.sh" ]]; then
+    warn "discover-prometheus.sh not found; skipping Prometheus endpoint discovery"
+    return 0
+  fi
+
+  local args=()
+  if [[ -n "${KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${KUBECONFIG_PATH}"); fi
+  if [[ -n "${CONTEXT_NAME}" ]]; then args+=(--context "${CONTEXT_NAME}"); fi
+
+  echo
+  echo "Discovering Prometheus endpoint for KEDA..."
+  "${SCRIPT_DIR}/discover-prometheus.sh" "${args[@]}" --apply || true
 }
 
 kommander_kc() {
@@ -485,6 +512,8 @@ kc -n "$ARGO_NS" annotate application "$APP_NAME" argocd.argoproj.io/refresh=har
 echo
 echo "Ensuring GHCR pull secret (optional)..."
 ensure_ghcr_pull_secret
+
+maybe_set_keda_prometheus_endpoint
 
 echo
 echo "ArgoCD:"
