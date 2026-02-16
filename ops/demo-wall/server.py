@@ -191,9 +191,12 @@ def _http_location(url: str, timeout: int = 3, insecure_tls: bool = False) -> st
             def redirect_request(self, req, fp, code, msg, headers, newurl):
                 return None
 
-        opener = urllib.request.build_opener(_NoRedirect())
+        opener = urllib.request.build_opener(
+            _NoRedirect(),
+            urllib.request.HTTPSHandler(context=ctx),
+        )
         try:
-            with opener.open(req, context=ctx, timeout=timeout) as r:
+            with opener.open(req, timeout=timeout) as r:
                 # If it didn't redirect, Location won't exist.
                 return r.headers.get("Location", "") or ""
         except urllib.error.HTTPError as e:
