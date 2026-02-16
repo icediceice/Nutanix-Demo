@@ -181,19 +181,24 @@ def _ingress_endpoint(namespace, name, default_scheme="https"):
     return f"{default_scheme}://{host}{path}"
 
 
-def _build_link(name, url, status, hint="", command="", access=""):
+def _build_link(name, url, status, hint="", command="", username="", password=""):
     return {
         "name": name,
         "url": url,
         "status": status,
         "hint": hint,
         "command": command,
-        "access": access,
+        "username": username,
+        "password": password,
     }
 
 
 def build_quick_links():
     links = []
+    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "")
+    kommander_sso_pass = os.environ.get("KOMMANDER_SSO_PASSWORD", "")
+    argocd_user = os.environ.get("ARGOCD_USERNAME", "admin")
+    argocd_pass = os.environ.get("ARGOCD_PASSWORD", "")
 
     kommander_ingress_base = ""
     kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
@@ -213,7 +218,6 @@ def build_quick_links():
             "",
             "pending",
             "Waiting for storefront ingress service",
-            access="Public demo endpoint",
         ))
     else:
         app_url = _service_lb_url(app_svc, preferred_ports=[80], default_scheme="http")
@@ -223,7 +227,6 @@ def build_quick_links():
                 app_url,
                 "ready",
                 "Storefront ingress URL",
-                access="Public demo endpoint",
             ))
         else:
             links.append(_build_link(
@@ -232,7 +235,6 @@ def build_quick_links():
                 "local",
                 "Storefront ingress URL via port-forward",
                 "kubectl -n istio-helm-gateway-ns port-forward svc/istio-helm-ingressgateway 8080:80",
-                "Port-forward access",
             ))
 
     # ArgoCD
@@ -243,7 +245,8 @@ def build_quick_links():
             "",
             "pending",
             "Waiting for ArgoCD service",
-            access="ArgoCD login (local user or SSO)",
+            username=argocd_user,
+            password=argocd_pass,
         ))
     else:
         argo_url = _service_lb_url(argo_svc, preferred_ports=[443], default_scheme="https")
@@ -253,7 +256,8 @@ def build_quick_links():
             "ready" if argo_url else "local",
             "GitOps control plane",
             "kubectl -n argocd port-forward svc/argocd-server 8443:443",
-            "ArgoCD login (local user or SSO)",
+            argocd_user,
+            argocd_pass,
         ))
 
     # Kiali
@@ -264,7 +268,8 @@ def build_quick_links():
             kiali_ing,
             "ready",
             "Service graph and traffic health (via Kommander ingress + SSO)",
-            access="Kommander SSO (Dex)",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
         ))
     else:
         kiali = _find_service(
@@ -282,7 +287,8 @@ def build_quick_links():
                 "ready" if remote else "local",
                 "Service graph and traffic health",
                 f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'kiali')} 20001:{port or 20001}",
-                "Cluster service or port-forward",
+                kommander_sso_user,
+                kommander_sso_pass,
             ))
         else:
             links.append(_build_link(
@@ -290,7 +296,8 @@ def build_quick_links():
                 "",
                 "pending",
                 "Waiting for Kiali service",
-                access="Kommander SSO (Dex)",
+                username=kommander_sso_user,
+                password=kommander_sso_pass,
             ))
 
     # Jaeger
@@ -301,7 +308,8 @@ def build_quick_links():
             jaeger_ing,
             "ready",
             "Distributed traces (via Kommander ingress + SSO)",
-            access="Kommander SSO (Dex)",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
         ))
     else:
         jaeger = _find_service(
@@ -319,7 +327,8 @@ def build_quick_links():
                 "ready" if remote else "local",
                 "Distributed traces",
                 f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'jaeger-query')} 16686:{port or 16686}",
-                "Cluster service or port-forward",
+                kommander_sso_user,
+                kommander_sso_pass,
             ))
         else:
             links.append(_build_link(
@@ -327,7 +336,8 @@ def build_quick_links():
                 "",
                 "pending",
                 "Waiting for Jaeger query service",
-                access="Kommander SSO (Dex)",
+                username=kommander_sso_user,
+                password=kommander_sso_pass,
             ))
 
     # Grafana
@@ -338,7 +348,8 @@ def build_quick_links():
             grafana_ing,
             "ready",
             "Dashboards and metrics (via Kommander ingress + SSO)",
-            access="Kommander SSO (Dex)",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
         ))
     else:
         grafana = _find_service(
@@ -356,7 +367,8 @@ def build_quick_links():
                 "ready" if remote else "local",
                 "Dashboards and metrics",
                 f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'grafana')} 3000:{port or 3000}",
-                "Cluster service or port-forward",
+                kommander_sso_user,
+                kommander_sso_pass,
             ))
         else:
             links.append(_build_link(
@@ -364,7 +376,8 @@ def build_quick_links():
                 "",
                 "pending",
                 "Waiting for Grafana service",
-                access="Kommander SSO (Dex)",
+                username=kommander_sso_user,
+                password=kommander_sso_pass,
             ))
 
     # Kommander ingress (optional, management cluster workspace)
@@ -378,7 +391,8 @@ def build_quick_links():
             kommander_url,
             "ready",
             "Platform UI",
-            access="Kommander SSO (Dex)",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
         ))
     else:
         links.append(_build_link(
@@ -386,7 +400,8 @@ def build_quick_links():
             "",
             "pending",
             "Waiting for platform ingress",
-            access="Kommander SSO (Dex)",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
         ))
 
     return links
