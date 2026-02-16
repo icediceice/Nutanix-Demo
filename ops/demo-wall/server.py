@@ -216,6 +216,25 @@ def _url_base(url: str) -> str:
         return ""
 
 
+def _parse_ini_value(text: str, key: str) -> str:
+    # Minimal INI-ish parser for "key = value" lines.
+    try:
+        for raw in (text or "").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or line.startswith(";"):
+                continue
+            if "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() != key:
+                continue
+            val = v.strip().strip("\"").strip("'")
+            return val
+    except Exception:
+        return ""
+    return ""
+
+
 def _list_ingress_paths(namespace: str):
     data = k8s_get_json(f"/apis/networking.k8s.io/v1/namespaces/{namespace}/ingresses")
     if "_error" in data:
@@ -304,12 +323,25 @@ def build_quick_links():
             elif port:
                 kommander_ingress_probe = f"{scheme}://{cluster_ip}:{port}/dkp/kubernetes"
 
+    # Preferred discovery path: read the traefik-forward-auth provider-uri (Dex base).
+    if not kommander_platform_base:
+        tfa_cfg = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/configmaps/traefik-forward-auth-configmap")
+        if "_error" not in tfa_cfg:
+            provider_uri = _parse_ini_value(get_nested(tfa_cfg, ["data", "config"], ""), "provider-uri")
+            base = _url_base(provider_uri)
+            # Example provider-uri: https://nkp-10-38-56-16.sslip.nutanixdemo.com/dex
+            if base:
+                kommander_platform_base = base
+
     # Try to discover the management-cluster platform hostname from the SSO redirect.
     # This lets us publish a valid, browser-friendly Kommander UI URL (sslip) instead of an IP/404 root.
     if not kommander_platform_base and (kommander_ingress_probe or kommander_ingress_base):
         probe = kommander_ingress_probe or f"{kommander_ingress_base}/dkp/kubernetes"
         loc = _http_location(probe, insecure_tls=True)
-        kommander_platform_base = _url_base(loc)
+        base = _url_base(loc)
+        # Avoid poisoning platform_base with redirects back to the workload ingress itself.
+        if base and "sslip" in base:
+            kommander_platform_base = base
 
     # Demo app
     app_svc = k8s_get_json("/api/v1/namespaces/istio-helm-gateway-ns/services/istio-helm-ingressgateway")
