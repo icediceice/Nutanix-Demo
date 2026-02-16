@@ -21,6 +21,31 @@ spec:
           image: ghcr.io/icediceice/otel-shop-lite-frontend:v1
           imagePullPolicy: IfNotPresent
           command: ["python", "/app/server.py", "--port", "8080"]
+          env:
+            - name: KOMMANDER_SSO_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: demo-wall-access
+                  key: kommander_username
+                  optional: true
+            - name: KOMMANDER_SSO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: demo-wall-access
+                  key: kommander_password
+                  optional: true
+            - name: ARGOCD_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: demo-wall-access
+                  key: argocd_username
+                  optional: true
+            - name: ARGOCD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: demo-wall-access
+                  key: argocd_password
+                  optional: true
           ports:
             - containerPort: 8080
           readinessProbe:
