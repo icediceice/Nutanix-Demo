@@ -6,6 +6,7 @@ import ssl
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 
 
 def _k8s_request(path: str):
@@ -181,6 +182,33 @@ def _ingress_endpoint(namespace, name, default_scheme="https"):
     return f"{default_scheme}://{host}{path}"
 
 
+def _http_location(url: str, timeout: int = 3, insecure_tls: bool = False) -> str:
+    try:
+        ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
+        req = urllib.request.Request(url, method="GET")
+        # Don't follow redirects automatically; we want the Location header.
+        opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+        try:
+            with opener.open(req, context=ctx, timeout=timeout) as r:
+                # If it didn't redirect, Location won't exist.
+                return r.headers.get("Location", "") or ""
+        except urllib.error.HTTPError as e:
+            # urllib raises for 30x unless redirect handler follows it. We want the 30x Location.
+            return e.headers.get("Location", "") or ""
+    except Exception:
+        return ""
+
+
+def _url_base(url: str) -> str:
+    try:
+        p = urllib.parse.urlparse(url)
+        if not p.scheme or not p.netloc:
+            return ""
+        return f"{p.scheme}://{p.netloc}"
+    except Exception:
+        return ""
+
+
 def _list_ingress_paths(namespace: str):
     data = k8s_get_json(f"/apis/networking.k8s.io/v1/namespaces/{namespace}/ingresses")
     if "_error" in data:
@@ -248,6 +276,7 @@ def build_quick_links():
     argocd_pass = os.environ.get("ARGOCD_PASSWORD", "")
 
     kommander_ingress_base = ""
+    kommander_platform_base = os.environ.get("KOMMANDER_PLATFORM_BASE", "")
     kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
     if "_error" not in kommander_traefik:
         host = _first_non_empty([
@@ -256,6 +285,12 @@ def build_quick_links():
         ])
         if host:
             kommander_ingress_base = f"https://{host}"
+
+    # Try to discover the management-cluster platform hostname from the SSO redirect.
+    # This lets us publish a valid, browser-friendly Kommander UI URL (sslip) instead of an IP/404 root.
+    if not kommander_platform_base and kommander_ingress_base:
+        loc = _http_location(f"{kommander_ingress_base}/dkp/kubernetes", insecure_tls=True)
+        kommander_platform_base = _url_base(loc)
 
     # Demo app
     app_svc = k8s_get_json("/api/v1/namespaces/istio-helm-gateway-ns/services/istio-helm-ingressgateway")
@@ -429,15 +464,19 @@ def build_quick_links():
 
     # Kommander ingress (optional, management cluster workspace)
     kommander_url = _ingress_link("kommander")
-    if not kommander_url and kommander_ingress_base:
-        # Root (/) is often not a UI landing page (can map to object store or 404).
-        # Pick a real routed /dkp/* entry point to keep links valid.
-        paths = _list_ingress_paths("kommander-default-workspace")
-        entry = _pick_platform_entry_path(paths)
-        if entry:
-            kommander_url = f"{kommander_ingress_base}{entry}"
-        else:
-            kommander_url = f"{kommander_ingress_base}/dkp/insights"
+    if not kommander_url:
+        # Prefer the platform hostname if we can discover it (typically has a valid TLS cert).
+        if kommander_platform_base:
+            kommander_url = f"{kommander_platform_base}/dkp/kommander/dashboard/"
+        elif kommander_ingress_base:
+            # Fallback to a known-good /dkp entry point on the workload ingress.
+            # Root (/) is often not a UI landing page (can map to object store or 404).
+            paths = _list_ingress_paths("kommander-default-workspace")
+            entry = _pick_platform_entry_path(paths)
+            if entry:
+                kommander_url = f"{kommander_ingress_base}{entry}"
+            else:
+                kommander_url = f"{kommander_ingress_base}/dkp/kubernetes"
 
     if kommander_url:
         links.append(_build_link(
