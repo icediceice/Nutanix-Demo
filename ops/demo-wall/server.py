@@ -40,9 +40,17 @@ def k8s_get_json(path: str):
 def get_nested(obj, keys, default=None):
     cur = obj
     for k in keys:
-        if not isinstance(cur, dict) or k not in cur:
-            return default
-        cur = cur[k]
+        if isinstance(cur, dict):
+            if k not in cur:
+                return default
+            cur = cur[k]
+            continue
+        if isinstance(cur, list) and isinstance(k, int):
+            if k < 0 or k >= len(cur):
+                return default
+            cur = cur[k]
+            continue
+        return default
     return cur
 
 
@@ -65,6 +73,197 @@ def extract_vs_weights(vs):
         return (v1, v2)
     except Exception:
         return (0, 0)
+
+
+def _first_non_empty(values):
+    for v in values:
+        if v:
+            return v
+    return ""
+
+
+def _service_port(service_obj, preferred_ports=None):
+    preferred_ports = preferred_ports or []
+    ports = get_nested(service_obj, ["spec", "ports"], []) or []
+    if not ports:
+        return 0
+    for wanted in preferred_ports:
+        for p in ports:
+            if int(p.get("port") or 0) == int(wanted):
+                return int(p.get("port") or 0)
+    return int(ports[0].get("port") or 0)
+
+
+def _service_lb_url(service_obj, preferred_ports=None, default_scheme="http"):
+    ingress = get_nested(service_obj, ["status", "loadBalancer", "ingress"], []) or []
+    if not ingress:
+        return ""
+    host = _first_non_empty([ingress[0].get("hostname"), ingress[0].get("ip")])
+    if not host:
+        return ""
+    port = _service_port(service_obj, preferred_ports=preferred_ports)
+    scheme = "https" if port == 443 else default_scheme
+    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        return f"{scheme}://{host}/"
+    return f"{scheme}://{host}:{port}/"
+
+
+def _list_services(namespace):
+    data = k8s_get_json(f"/api/v1/namespaces/{namespace}/services")
+    if "_error" in data:
+        return []
+    return data.get("items") or []
+
+
+def _find_service(namespaces, name_tokens=None, preferred_ports=None):
+    name_tokens = [t.lower() for t in (name_tokens or [])]
+    preferred_ports = preferred_ports or []
+    best = None
+    best_score = -1
+
+    for ns in namespaces:
+        for svc in _list_services(ns):
+            name = get_nested(svc, ["metadata", "name"], "").lower()
+            labels = get_nested(svc, ["metadata", "labels"], {}) or {}
+            label_blob = " ".join([f"{k}={v}" for k, v in labels.items()]).lower()
+            ports = get_nested(svc, ["spec", "ports"], []) or []
+            port_values = {int(p.get("port") or 0) for p in ports}
+
+            score = 0
+            if any(tok in name for tok in name_tokens):
+                score += 4
+            if any(tok in label_blob for tok in name_tokens):
+                score += 2
+            if preferred_ports and any(int(p) in port_values for p in preferred_ports):
+                score += 3
+            if score <= 0:
+                continue
+            if score > best_score:
+                best_score = score
+                best = (ns, svc)
+
+    return best
+
+
+def _ingress_link(namespace):
+    data = k8s_get_json(f"/apis/networking.k8s.io/v1/namespaces/{namespace}/ingresses")
+    if "_error" in data:
+        return ""
+    for ing in data.get("items") or []:
+        host = _first_non_empty([
+            get_nested(ing, ["status", "loadBalancer", "ingress", 0, "hostname"], ""),
+            get_nested(ing, ["status", "loadBalancer", "ingress", 0, "ip"], ""),
+            get_nested(ing, ["spec", "rules", 0, "host"], ""),
+        ])
+        if host:
+            return f"https://{host}/"
+    return ""
+
+
+def _build_link(name, url, status, hint="", command=""):
+    return {"name": name, "url": url, "status": status, "hint": hint, "command": command}
+
+
+def build_quick_links():
+    links = []
+
+    # Demo app
+    app_svc = k8s_get_json("/api/v1/namespaces/istio-helm-gateway-ns/services/istio-helm-ingressgateway")
+    if "_error" in app_svc:
+        links.append(_build_link("Demo App", "", "pending", "Waiting for storefront ingress service"))
+    else:
+        app_url = _service_lb_url(app_svc, preferred_ports=[80], default_scheme="http")
+        if app_url:
+            links.append(_build_link("Demo App", app_url, "ready", "Storefront ingress URL"))
+        else:
+            links.append(_build_link(
+                "Demo App",
+                "http://localhost:8080/",
+                "local",
+                "Storefront ingress URL via port-forward",
+                "kubectl -n istio-helm-gateway-ns port-forward svc/istio-helm-ingressgateway 8080:80",
+            ))
+
+    # ArgoCD
+    argo_svc = k8s_get_json("/api/v1/namespaces/argocd/services/argocd-server")
+    if "_error" in argo_svc:
+        links.append(_build_link("ArgoCD", "", "pending", "Waiting for ArgoCD service"))
+    else:
+        argo_url = _service_lb_url(argo_svc, preferred_ports=[443], default_scheme="https")
+        links.append(_build_link(
+            "ArgoCD",
+            argo_url or "https://localhost:8443/",
+            "ready" if argo_url else "local",
+            "GitOps control plane",
+            "kubectl -n argocd port-forward svc/argocd-server 8443:443",
+        ))
+
+    # Kiali
+    kiali = _find_service(
+        namespaces=["istio-system", "kommander-default-workspace", "kommander"],
+        name_tokens=["kiali"],
+        preferred_ports=[20001, 80],
+    )
+    if kiali:
+        ns, svc = kiali
+        remote = _service_lb_url(svc, preferred_ports=[20001, 80], default_scheme="http")
+        port = _service_port(svc, preferred_ports=[20001, 80])
+        links.append(_build_link(
+            "Kiali",
+            remote or "http://localhost:20001/",
+            "ready" if remote else "local",
+            "Service graph and traffic health",
+            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'kiali')} 20001:{port or 20001}",
+        ))
+    else:
+        links.append(_build_link("Kiali", "", "pending", "Waiting for Kiali service"))
+
+    # Jaeger
+    jaeger = _find_service(
+        namespaces=["istio-system", "kommander-default-workspace", "kommander"],
+        name_tokens=["jaeger", "query"],
+        preferred_ports=[16686, 80],
+    )
+    if jaeger:
+        ns, svc = jaeger
+        remote = _service_lb_url(svc, preferred_ports=[16686, 80], default_scheme="http")
+        port = _service_port(svc, preferred_ports=[16686, 80])
+        links.append(_build_link(
+            "Jaeger",
+            remote or "http://localhost:16686/",
+            "ready" if remote else "local",
+            "Distributed traces",
+            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'jaeger-query')} 16686:{port or 16686}",
+        ))
+    else:
+        links.append(_build_link("Jaeger", "", "pending", "Waiting for Jaeger query service"))
+
+    # Grafana
+    grafana = _find_service(
+        namespaces=["kommander-default-workspace", "kommander", "monitoring"],
+        name_tokens=["grafana"],
+        preferred_ports=[3000, 80],
+    )
+    if grafana:
+        ns, svc = grafana
+        remote = _service_lb_url(svc, preferred_ports=[3000, 80], default_scheme="http")
+        port = _service_port(svc, preferred_ports=[3000, 80])
+        links.append(_build_link(
+            "Grafana",
+            remote or "http://localhost:3000/",
+            "ready" if remote else "local",
+            "Dashboards and metrics",
+            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'grafana')} 3000:{port or 3000}",
+        ))
+    else:
+        links.append(_build_link("Grafana", "", "pending", "Waiting for Grafana service"))
+
+    # Kommander ingress (optional, management cluster workspace)
+    kommander_url = _ingress_link("kommander")
+    if kommander_url:
+        links.append(_build_link("Kommander", kommander_url, "ready", "Platform UI"))
+
+    return links
 
 
 def build_payload():
@@ -117,6 +316,7 @@ def build_payload():
     # Simple CD KPI
     cd_ok = (sync_status == "Synced" and health_status == "Healthy")
     cd_rate = 100.0 if cd_ok else (50.0 if health_status in ("Progressing", "Suspended") else 0.0)
+    links = build_quick_links()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -147,6 +347,7 @@ def build_payload():
             {"name": "Canary Weight v2", "value": f"{w2}%", "status": "good", "threshold": "informational"},
             {"name": "Policy Compliance", "value": f"{compliance}%", "status": policy_status, "threshold": ">= 95%"},
         ],
+        "links": links,
     }
 
 
