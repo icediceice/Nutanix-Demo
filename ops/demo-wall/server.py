@@ -160,6 +160,27 @@ def _ingress_link(namespace):
     return ""
 
 
+def _ingress_endpoint(namespace, name, default_scheme="https"):
+    ing = k8s_get_json(f"/apis/networking.k8s.io/v1/namespaces/{namespace}/ingresses/{name}")
+    if "_error" in ing:
+        return ""
+
+    host = _first_non_empty([
+        get_nested(ing, ["status", "loadBalancer", "ingress", 0, "hostname"], ""),
+        get_nested(ing, ["status", "loadBalancer", "ingress", 0, "ip"], ""),
+        get_nested(ing, ["spec", "rules", 0, "host"], ""),
+    ])
+    if not host:
+        return ""
+
+    path = get_nested(ing, ["spec", "rules", 0, "http", "paths", 0, "path"], "/")
+    if not path:
+        path = "/"
+    if not str(path).startswith("/"):
+        path = f"/{path}"
+    return f"{default_scheme}://{host}{path}"
+
+
 def _build_link(name, url, status, hint="", command=""):
     return {"name": name, "url": url, "status": status, "hint": hint, "command": command}
 
@@ -199,64 +220,91 @@ def build_quick_links():
         ))
 
     # Kiali
-    kiali = _find_service(
+    kiali_ing = _ingress_endpoint("kommander-default-workspace", "kiali")
+    if kiali_ing:
+        links.append(_build_link(
+            "Kiali",
+            kiali_ing,
+            "ready",
+            "Service graph and traffic health (via Kommander ingress + SSO)",
+        ))
+    else:
+        kiali = _find_service(
         namespaces=["istio-system", "kommander-default-workspace", "kommander"],
         name_tokens=["kiali"],
         preferred_ports=[20001, 80],
-    )
-    if kiali:
-        ns, svc = kiali
-        remote = _service_lb_url(svc, preferred_ports=[20001, 80], default_scheme="http")
-        port = _service_port(svc, preferred_ports=[20001, 80])
-        links.append(_build_link(
-            "Kiali",
-            remote or "http://localhost:20001/",
-            "ready" if remote else "local",
-            "Service graph and traffic health",
-            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'kiali')} 20001:{port or 20001}",
-        ))
-    else:
-        links.append(_build_link("Kiali", "", "pending", "Waiting for Kiali service"))
+        )
+        if kiali:
+            ns, svc = kiali
+            remote = _service_lb_url(svc, preferred_ports=[20001, 80], default_scheme="http")
+            port = _service_port(svc, preferred_ports=[20001, 80])
+            links.append(_build_link(
+                "Kiali",
+                remote or "http://localhost:20001/",
+                "ready" if remote else "local",
+                "Service graph and traffic health",
+                f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'kiali')} 20001:{port or 20001}",
+            ))
+        else:
+            links.append(_build_link("Kiali", "", "pending", "Waiting for Kiali service"))
 
     # Jaeger
-    jaeger = _find_service(
+    jaeger_ing = _ingress_endpoint("istio-system", "jaeger-jaeger-operator-jaeger-query")
+    if jaeger_ing:
+        links.append(_build_link(
+            "Jaeger",
+            jaeger_ing,
+            "ready",
+            "Distributed traces (via Kommander ingress + SSO)",
+        ))
+    else:
+        jaeger = _find_service(
         namespaces=["istio-system", "kommander-default-workspace", "kommander"],
         name_tokens=["jaeger", "query"],
         preferred_ports=[16686, 80],
-    )
-    if jaeger:
-        ns, svc = jaeger
-        remote = _service_lb_url(svc, preferred_ports=[16686, 80], default_scheme="http")
-        port = _service_port(svc, preferred_ports=[16686, 80])
-        links.append(_build_link(
-            "Jaeger",
-            remote or "http://localhost:16686/",
-            "ready" if remote else "local",
-            "Distributed traces",
-            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'jaeger-query')} 16686:{port or 16686}",
-        ))
-    else:
-        links.append(_build_link("Jaeger", "", "pending", "Waiting for Jaeger query service"))
+        )
+        if jaeger:
+            ns, svc = jaeger
+            remote = _service_lb_url(svc, preferred_ports=[16686, 80], default_scheme="http")
+            port = _service_port(svc, preferred_ports=[16686, 80])
+            links.append(_build_link(
+                "Jaeger",
+                remote or "http://localhost:16686/",
+                "ready" if remote else "local",
+                "Distributed traces",
+                f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'jaeger-query')} 16686:{port or 16686}",
+            ))
+        else:
+            links.append(_build_link("Jaeger", "", "pending", "Waiting for Jaeger query service"))
 
     # Grafana
-    grafana = _find_service(
+    grafana_ing = _ingress_endpoint("kommander-default-workspace", "grafana-logging")
+    if grafana_ing:
+        links.append(_build_link(
+            "Grafana",
+            grafana_ing,
+            "ready",
+            "Dashboards and metrics (via Kommander ingress + SSO)",
+        ))
+    else:
+        grafana = _find_service(
         namespaces=["kommander-default-workspace", "kommander", "monitoring"],
         name_tokens=["grafana"],
         preferred_ports=[3000, 80],
-    )
-    if grafana:
-        ns, svc = grafana
-        remote = _service_lb_url(svc, preferred_ports=[3000, 80], default_scheme="http")
-        port = _service_port(svc, preferred_ports=[3000, 80])
-        links.append(_build_link(
-            "Grafana",
-            remote or "http://localhost:3000/",
-            "ready" if remote else "local",
-            "Dashboards and metrics",
-            f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'grafana')} 3000:{port or 3000}",
-        ))
-    else:
-        links.append(_build_link("Grafana", "", "pending", "Waiting for Grafana service"))
+        )
+        if grafana:
+            ns, svc = grafana
+            remote = _service_lb_url(svc, preferred_ports=[3000, 80], default_scheme="http")
+            port = _service_port(svc, preferred_ports=[3000, 80])
+            links.append(_build_link(
+                "Grafana",
+                remote or "http://localhost:3000/",
+                "ready" if remote else "local",
+                "Dashboards and metrics",
+                f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'grafana')} 3000:{port or 3000}",
+            ))
+        else:
+            links.append(_build_link("Grafana", "", "pending", "Waiting for Grafana service"))
 
     # Kommander ingress (optional, management cluster workspace)
     kommander_url = _ingress_link("kommander")
