@@ -18,7 +18,7 @@ spec:
       serviceAccountName: demo-wall
       containers:
         - name: demo-wall
-          image: python:3.12-alpine
+          image: ghcr.io/icediceice/otel-shop-lite-frontend:v1
           imagePullPolicy: IfNotPresent
           command: ["python", "/app/server.py", "--port", "8080"]
           ports:
