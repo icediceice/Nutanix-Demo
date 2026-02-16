@@ -478,7 +478,7 @@ def build_payload():
 
 
 def serve(port: int):
-    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     here = os.path.dirname(os.path.abspath(__file__))
     index_path = os.path.join(here, "index.html")
@@ -493,6 +493,14 @@ def serve(port: int):
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(data)
+                return
+
+            if self.path == "/healthz":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(b"ok")
                 return
 
             if self.path == "/api/status":
@@ -512,7 +520,7 @@ def serve(port: int):
             # keep logs quiet
             return
 
-    httpd = HTTPServer(("0.0.0.0", port), Handler)
+    httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     httpd.serve_forever()
 
 
