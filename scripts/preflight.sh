@@ -76,14 +76,6 @@ for ns in demo-app demo-ops; do
 done
 
 echo
-echo "Registry Secret:"
-if "$KUBECTL" -n demo-app get secret ghcr-pull >/dev/null 2>&1; then
-  echo "demo-app/secret ghcr-pull: present"
-else
-  warn "demo-app/secret ghcr-pull: missing (required if GHCR images are private)"
-fi
-
-echo
 echo "External Access:"
 if "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway >/dev/null 2>&1; then
   "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
