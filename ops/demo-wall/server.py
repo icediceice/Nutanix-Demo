@@ -181,6 +181,53 @@ def _ingress_endpoint(namespace, name, default_scheme="https"):
     return f"{default_scheme}://{host}{path}"
 
 
+def _list_ingress_paths(namespace: str):
+    data = k8s_get_json(f"/apis/networking.k8s.io/v1/namespaces/{namespace}/ingresses")
+    if "_error" in data:
+        return []
+    paths = []
+    for ing in data.get("items") or []:
+        for rule in (ing.get("spec") or {}).get("rules") or []:
+            http = (rule.get("http") or {})
+            for p in http.get("paths") or []:
+                path = p.get("path")
+                if not path:
+                    continue
+                if not str(path).startswith("/"):
+                    path = f"/{path}"
+                paths.append(str(path))
+    # De-dupe while preserving order.
+    seen = set()
+    out = []
+    for p in paths:
+        if p in seen:
+            continue
+        seen.add(p)
+        out.append(p)
+    return out
+
+
+def _pick_platform_entry_path(paths):
+    # Prefer Kommander/NKP landing pages if present, otherwise any /dkp/* route.
+    preferred = [
+        "/dkp/kommander",
+        "/dkp/kommander/",
+        "/dkp/insights",
+        "/dkp/insights/",
+        "/dkp/kubernetes",
+        "/dkp/kubernetes/",
+        "/dkp/grafana",
+        "/dkp/grafana/",
+    ]
+    for p in preferred:
+        if p in paths:
+            return p
+    for p in paths:
+        if p.startswith("/dkp/"):
+            return p
+    return ""
+
+
 def _build_link(name, url, status, hint="", command="", username="", password=""):
     return {
         "name": name,
@@ -383,7 +430,14 @@ def build_quick_links():
     # Kommander ingress (optional, management cluster workspace)
     kommander_url = _ingress_link("kommander")
     if not kommander_url and kommander_ingress_base:
-        kommander_url = f"{kommander_ingress_base}/"
+        # Root (/) is often not a UI landing page (can map to object store or 404).
+        # Pick a real routed /dkp/* entry point to keep links valid.
+        paths = _list_ingress_paths("kommander-default-workspace")
+        entry = _pick_platform_entry_path(paths)
+        if entry:
+            kommander_url = f"{kommander_ingress_base}{entry}"
+        else:
+            kommander_url = f"{kommander_ingress_base}/dkp/insights"
 
     if kommander_url:
         links.append(_build_link(
