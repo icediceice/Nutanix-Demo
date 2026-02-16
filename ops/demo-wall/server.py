@@ -186,8 +186,12 @@ def _http_location(url: str, timeout: int = 3, insecure_tls: bool = False) -> st
     try:
         ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
         req = urllib.request.Request(url, method="GET")
-        # Don't follow redirects automatically; we want the Location header.
-        opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+        # Don't follow redirects; we want the initial Location header.
+        class _NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        opener = urllib.request.build_opener(_NoRedirect())
         try:
             with opener.open(req, context=ctx, timeout=timeout) as r:
                 # If it didn't redirect, Location won't exist.
