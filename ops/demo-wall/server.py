@@ -188,6 +188,16 @@ def _build_link(name, url, status, hint="", command=""):
 def build_quick_links():
     links = []
 
+    kommander_ingress_base = ""
+    kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
+    if "_error" not in kommander_traefik:
+        host = _first_non_empty([
+            get_nested(kommander_traefik, ["status", "loadBalancer", "ingress", 0, "hostname"], ""),
+            get_nested(kommander_traefik, ["status", "loadBalancer", "ingress", 0, "ip"], ""),
+        ])
+        if host:
+            kommander_ingress_base = f"https://{host}"
+
     # Demo app
     app_svc = k8s_get_json("/api/v1/namespaces/istio-helm-gateway-ns/services/istio-helm-ingressgateway")
     if "_error" in app_svc:
@@ -220,7 +230,7 @@ def build_quick_links():
         ))
 
     # Kiali
-    kiali_ing = _ingress_endpoint("kommander-default-workspace", "kiali")
+    kiali_ing = f"{kommander_ingress_base}/dkp/kiali" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "kiali")
     if kiali_ing:
         links.append(_build_link(
             "Kiali",
@@ -249,7 +259,7 @@ def build_quick_links():
             links.append(_build_link("Kiali", "", "pending", "Waiting for Kiali service"))
 
     # Jaeger
-    jaeger_ing = _ingress_endpoint("istio-system", "jaeger-jaeger-operator-jaeger-query")
+    jaeger_ing = f"{kommander_ingress_base}/dkp/jaeger" if kommander_ingress_base else _ingress_endpoint("istio-system", "jaeger-jaeger-operator-jaeger-query")
     if jaeger_ing:
         links.append(_build_link(
             "Jaeger",
@@ -278,7 +288,7 @@ def build_quick_links():
             links.append(_build_link("Jaeger", "", "pending", "Waiting for Jaeger query service"))
 
     # Grafana
-    grafana_ing = _ingress_endpoint("kommander-default-workspace", "grafana-logging")
+    grafana_ing = f"{kommander_ingress_base}/dkp/logging/grafana" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "grafana-logging")
     if grafana_ing:
         links.append(_build_link(
             "Grafana",
