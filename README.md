@@ -16,6 +16,9 @@ Simplified, branch-driven demo for NKP Rx environments.
 - `partner/TROUBLESHOOTING.md`
 - `partner/RESET.md`
 
+KEDA (optional autoscaling demo):
+- `docs/keda.md`
+
 ## Repo layout
 - `clusters/rx-demo/argocd`: ArgoCD bootstrap + Application (recommended)
 - `platform`: namespaces, RBAC, quotas, Istio injection labels, Kommander add-ons

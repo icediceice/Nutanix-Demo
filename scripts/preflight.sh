@@ -52,6 +52,14 @@ if [[ "$missing_istio" -eq 1 ]]; then
 fi
 
 echo
+echo "KEDA (optional):"
+if "$KUBECTL" get crd scaledobjects.keda.sh >/dev/null 2>&1; then
+  echo "ScaledObject CRD: present"
+else
+  warn "ScaledObject CRD: missing (KEDA not detected). KEDA scenario branch will not work until KEDA is installed."
+fi
+
+echo
 echo "Kommander (optional):"
 if "$KUBECTL" get crd appdeployments.apps.kommander.d2iq.io >/dev/null 2>&1; then
   echo "AppDeployment CRD: present"
