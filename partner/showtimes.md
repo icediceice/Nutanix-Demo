@@ -186,7 +186,28 @@ kubectl get constrainttemplates.templates.gatekeeper.sh
 kubectl get constraints -A | rg demo- || true
 ```
 
-Also point to Demo Wall policy summary.
+Point to Demo Wall policy summary.
+
+Optional (make it tangible with a non-blocking violation):
+
+```bash
+kubectl apply -f platform/policy/examples/policy-violation-example.yaml
+kubectl -n demo-app get pod policy-violation-example -o wide
+```
+
+Then show the violation counters (may take 30-90s to update depending on Gatekeeper audit interval):
+
+```bash
+kubectl get k8sdemorequiredlabels.constraints.gatekeeper.sh demo-required-labels -o jsonpath='{.status.totalViolations}{"\n"}' || true
+kubectl get k8sdemorequiredresources.constraints.gatekeeper.sh demo-required-resources -o jsonpath='{.status.totalViolations}{"\n"}' || true
+kubectl get k8sdemonolatest.constraints.gatekeeper.sh demo-no-latest -o jsonpath='{.status.totalViolations}{"\n"}' || true
+```
+
+Cleanup:
+
+```bash
+kubectl -n demo-app delete pod policy-violation-example --ignore-not-found
+```
 
 ## 9) End Session Safely (30 seconds)
 
@@ -213,4 +234,3 @@ If a sync is stuck, first check the reason (usually a workload issue):
 kubectl -n argocd describe application rx-demo | rg -n \"Failed|exceeded|forbidden|quota|ImagePull|error\" -n || true
 kubectl -n demo-app get events --sort-by=.lastTimestamp | tail -n 30
 ```
-
