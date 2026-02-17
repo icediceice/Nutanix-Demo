@@ -48,6 +48,22 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 kubectl -n argocd get application rx-demo -o wide
 ```
 
+## Governance (Gatekeeper) quick checks
+```bash
+kubectl get constrainttemplates.templates.gatekeeper.sh
+kubectl get constraints -A | rg demo- || true
+```
+
+Optional (non-blocking violation example):
+```bash
+kubectl apply -f platform/policy/examples/policy-violation-example.yaml
+kubectl -n demo-app get pod policy-violation-example -o wide
+kubectl get k8sdemorequiredlabels.constraints.gatekeeper.sh demo-required-labels -o jsonpath='{.status.totalViolations}{"\n"}' || true
+kubectl get k8sdemorequiredresources.constraints.gatekeeper.sh demo-required-resources -o jsonpath='{.status.totalViolations}{"\n"}' || true
+kubectl get k8sdemonolatest.constraints.gatekeeper.sh demo-no-latest -o jsonpath='{.status.totalViolations}{"\n"}' || true
+kubectl -n demo-app delete pod policy-violation-example --ignore-not-found
+```
+
 ## Demo app access (external)
 ```bash
 kubectl -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
