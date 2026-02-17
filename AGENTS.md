@@ -20,8 +20,14 @@ This repo is a branch-driven GitOps demo. Prefer reading targeted docs and makin
 - Avoid “two controllers manage the same resources”: ArgoCD should be the GitOps driver for the demo namespaces.
 - Never commit secrets or kubeconfigs. `auth/` is intentionally git-ignored.
 
+## Branch Consistency (Keep Core Components Identical)
+- Keep “core platform components” consistent across `main` and all `scenario/*` branches unless a scenario explicitly requires a difference.
+- Core components include: Demo Wall (`ops/demo-wall/*`), operator docs (`partner/*`), bootstrap/ops scripts (`scripts/*`), and shared platform guardrails (`platform/*`).
+- If a scenario must diverge, make the difference intentional and easy to audit:
+  - Keep changes scoped to overlays/selectors where possible.
+  - Document the rationale in the relevant runbook/spec (for example `partner/SCENARIOS.md` or `docs/demo-spec.md`).
+
 ## Token Discipline (How To Explore)
 - Prefer `rg` for discovery and open only the files you need.
 - When inspecting large files, use `sed -n '1,200p' <file>` style slices.
 - For manifests, validate with `kubectl kustomize <path>` (or `kustomize build <path>`) when available.
-
