@@ -16,7 +16,7 @@ rules:
     resources: ["deployments"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources: ["services"]
+    resources: ["services", "configmaps"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses"]
