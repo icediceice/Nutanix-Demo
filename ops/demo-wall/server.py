@@ -186,10 +186,17 @@ def _http_location(url: str, timeout: int = 3, insecure_tls: bool = False) -> st
     try:
         ctx = ssl._create_unverified_context() if insecure_tls else ssl.create_default_context()
         req = urllib.request.Request(url, method="GET")
-        # Don't follow redirects automatically; we want the Location header.
-        opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+        # Don't follow redirects; we want the initial Location header.
+        class _NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                return None
+
+        opener = urllib.request.build_opener(
+            _NoRedirect(),
+            urllib.request.HTTPSHandler(context=ctx),
+        )
         try:
-            with opener.open(req, context=ctx, timeout=timeout) as r:
+            with opener.open(req, timeout=timeout) as r:
                 # If it didn't redirect, Location won't exist.
                 return r.headers.get("Location", "") or ""
         except urllib.error.HTTPError as e:
@@ -207,6 +214,25 @@ def _url_base(url: str) -> str:
         return f"{p.scheme}://{p.netloc}"
     except Exception:
         return ""
+
+
+def _parse_ini_value(text: str, key: str) -> str:
+    # Minimal INI-ish parser for "key = value" lines.
+    try:
+        for raw in (text or "").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#") or line.startswith(";"):
+                continue
+            if "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            if k.strip() != key:
+                continue
+            val = v.strip().strip("\"").strip("'")
+            return val
+    except Exception:
+        return ""
+    return ""
 
 
 def _list_ingress_paths(namespace: str):
@@ -276,6 +302,7 @@ def build_quick_links():
     argocd_pass = os.environ.get("ARGOCD_PASSWORD", "")
 
     kommander_ingress_base = ""
+    kommander_ingress_probe = ""
     kommander_platform_base = os.environ.get("KOMMANDER_PLATFORM_BASE", "")
     kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
     if "_error" not in kommander_traefik:
@@ -286,11 +313,35 @@ def build_quick_links():
         if host:
             kommander_ingress_base = f"https://{host}"
 
+        # Prefer probing via ClusterIP to avoid "hairpin" issues reaching the LoadBalancer IP from pods.
+        cluster_ip = get_nested(kommander_traefik, ["spec", "clusterIP"], "")
+        if cluster_ip and str(cluster_ip).lower() != "none":
+            port = _service_port(kommander_traefik, preferred_ports=[443, 80])
+            scheme = "https" if int(port or 0) == 443 else "http"
+            if port and ((scheme == "https" and port == 443) or (scheme == "http" and port == 80)):
+                kommander_ingress_probe = f"{scheme}://{cluster_ip}/dkp/kubernetes"
+            elif port:
+                kommander_ingress_probe = f"{scheme}://{cluster_ip}:{port}/dkp/kubernetes"
+
+    # Preferred discovery path: read the traefik-forward-auth provider-uri (Dex base).
+    if not kommander_platform_base:
+        tfa_cfg = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/configmaps/traefik-forward-auth-configmap")
+        if "_error" not in tfa_cfg:
+            provider_uri = _parse_ini_value(get_nested(tfa_cfg, ["data", "config"], ""), "provider-uri")
+            base = _url_base(provider_uri)
+            # Example provider-uri: https://nkp-10-38-56-16.sslip.nutanixdemo.com/dex
+            if base:
+                kommander_platform_base = base
+
     # Try to discover the management-cluster platform hostname from the SSO redirect.
     # This lets us publish a valid, browser-friendly Kommander UI URL (sslip) instead of an IP/404 root.
-    if not kommander_platform_base and kommander_ingress_base:
-        loc = _http_location(f"{kommander_ingress_base}/dkp/kubernetes", insecure_tls=True)
-        kommander_platform_base = _url_base(loc)
+    if not kommander_platform_base and (kommander_ingress_probe or kommander_ingress_base):
+        probe = kommander_ingress_probe or f"{kommander_ingress_base}/dkp/kubernetes"
+        loc = _http_location(probe, insecure_tls=True)
+        base = _url_base(loc)
+        # Avoid poisoning platform_base with redirects back to the workload ingress itself.
+        if base and "sslip" in base:
+            kommander_platform_base = base
 
     # Demo app
     app_svc = k8s_get_json("/api/v1/namespaces/istio-helm-gateway-ns/services/istio-helm-ingressgateway")
