@@ -271,6 +271,43 @@ This stops the load generator. The cluster is idle and safe to leave.
 
 ---
 
+### Beat 14 — (Optional) Autoscaling with KEDA
+
+> Requires KEDA pre-installed (`platform/keda/` applied, or bootstrap with `--branch scenario/keda-checkout`).
+
+**Action**: Switch to `scenario/keda-checkout` in ArgoCD.
+
+What happens:
+- ArgoCD syncs the `keda-checkout` overlay — deploys the KEDA `ScaledObject` for `checkout-api-v1`
+- Both checkout-api replicas start at **0** (scale-to-zero)
+- The Demo Wall **Autoscaler (KEDA)** card appears and shows **"Idle · scaled to zero"** in amber
+
+Wait ~30 s, then watch the storefront checkout under baseline load:
+- KEDA detects Istio request rate crossing the threshold (0.2 RPS)
+- `checkout-api-v1` scales from 0 → N replicas
+- Demo Wall card flips to **"Active ↑ scaling"** in green; the replica bar fills
+
+```bash
+# Watch the scale event live
+kubectl -n demo-app get deploy checkout-api-v1 -w
+
+# Inspect the ScaledObject trigger and conditions
+kubectl -n demo-app describe scaledobject checkout-api-v1-keda
+```
+
+**What you say**: _"One branch switch deployed KEDA and gave checkout-api a Prometheus-driven autoscaler.
+The platform saw traffic, woke the service from zero, and will scale it back down after the cooldown window —
+no HPA YAML, no manual tuning."_
+
+Return to baseline when done:
+```bash
+kubectl -n argocd patch application rx-demo --type merge \
+  -p '{"spec":{"source":{"targetRevision":"scenario/baseline"}}}'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+```
+
+---
+
 ## 4. Scenario reference
 
 | Branch | What it does | Intent (shown in Demo Wall) | Logical next |
