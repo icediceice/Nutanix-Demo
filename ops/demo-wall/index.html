@@ -9,20 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Nutanix brand */
-      --nx-blue:    #0091DA;
-      --nx-green:   #AFD135;
-      --nx-navy:    #003B5C;
-      /* Wall tokens */
-      --bg-a:  #001020;
-      --bg-b:  #001828;
-      --card:  #002238;
-      --line:  #004068;
-      --ink:   #D8E8F8;
-      --muted: #6090B8;
-      --good:  #AFD135;
-      --bad:   #FF5252;
-      --warn:  #F5A623;
+      --nx-blue:  #0091DA;
+      --nx-green: #AFD135;
+      --nx-navy:  #003B5C;
+      --bg-a:   #001020;
+      --card:   rgba(16,27,43,.94);
+      --line:   #004068;
+      --ink:    #D8E8F8;
+      --muted:  #6090B8;
+      --good:   #AFD135;
+      --bad:    #FF5252;
+      --warn:   #F5A623;
       --accent: #0091DA;
     }
     * { box-sizing: border-box; }
@@ -33,254 +30,248 @@
       background: radial-gradient(ellipse at 20% 0%, #002840 0%, var(--bg-a) 55%);
       min-height: 100vh;
     }
-    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 16px; }
 
     /* ── Header ── */
     .top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      gap: 12px;
-      flex-wrap: wrap;
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; gap: 12px; flex-wrap: wrap;
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .brand { display: flex; align-items: center; gap: 10px; }
     .brand-mark {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      display: grid;
-      place-items: center;
-      background: var(--nx-green);
-      color: var(--nx-navy);
-      font-family: "Sora", sans-serif;
-      font-size: 0.88rem;
-      font-weight: 700;
-      flex-shrink: 0;
+      width: 34px; height: 34px; border-radius: 8px;
+      display: grid; place-items: center;
+      background: var(--nx-green); color: var(--nx-navy);
+      font-family: "Sora", sans-serif; font-size: .82rem; font-weight: 700; flex-shrink: 0;
     }
-    .title {
-      margin: 0;
-      font-family: "Sora", "Work Sans", sans-serif;
-      font-size: clamp(1.2rem, 2.5vw, 1.75rem);
-      font-weight: 700;
+    h1.title {
+      margin: 0; font-family: "Sora", sans-serif;
+      font-size: clamp(1.1rem, 2.5vw, 1.6rem); font-weight: 700;
     }
-    .stamp { color: var(--muted); font-size: .86rem; }
+    .stamp { color: var(--muted); font-size: .82rem; }
 
     /* ── Section labels ── */
     .section-label {
-      margin: 0 0 8px;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
-      color: var(--muted);
+      margin: 0 0 8px; font-size: .68rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 4px;
     }
+    .section { margin-bottom: 18px; }
 
-    /* ── Cards ── */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
-    }
+    /* ── Base card ── */
     .card {
-      background: rgba(16, 27, 43, .92);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 14px;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; padding: 14px 16px;
     }
-    .label {
-      color: var(--muted);
-      font-size: .75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .07em;
+    .card-label {
+      font-size: .68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .09em; color: var(--muted); margin-bottom: 6px;
     }
-    .value {
-      margin-top: 6px;
-      font-family: "Sora", "Work Sans", sans-serif;
-      font-size: 1.25rem;
-      font-weight: 700;
-      word-break: break-word;
+    .card-value {
+      font-family: "Sora", sans-serif; font-size: 1.2rem;
+      font-weight: 700; word-break: break-word; line-height: 1.2;
     }
-    .sub {
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: .83rem;
-      word-break: break-word;
+    .card-sub {
+      margin-top: 4px; font-size: .78rem;
+      color: var(--muted); word-break: break-word; line-height: 1.4;
     }
-    .intent {
-      margin-top: 6px;
-      font-size: .78rem;
-      line-height: 1.45;
-      color: var(--muted);
-      font-style: italic;
-      word-break: break-word;
-    }
-    .next-hint {
-      margin-top: 7px;
-      font-size: .7rem;
-      color: var(--muted);
-      opacity: .75;
-    }
-    .next-hint strong { color: var(--accent); font-style: normal; font-weight: 600; }
-    .keda-bar-wrap {
-      margin-top: 10px;
-      height: 5px;
-      background: var(--line);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .keda-bar {
-      height: 100%;
-      border-radius: 3px;
-      background: var(--nx-green);
-      transition: width 1.2s ease;
-      width: 0%;
-    }
-    .quota-bar-wrap {
-      margin-top: 10px;
-      height: 5px;
-      background: var(--line);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .quota-bar {
-      height: 100%;
-      border-radius: 3px;
-      transition: width 1.2s ease, background 1.2s ease;
-      width: 0%;
-    }
-    .good { color: var(--good); }
-    .bad  { color: var(--bad); }
-    .warn { color: var(--warn); }
 
-    /* ── KPI grid ── */
-    .kpi-grid {
+    /* ── SCENARIO hero card ── */
+    .scenario-hero {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 16px; align-items: start;
+    }
+    .scenario-branch {
+      font-family: "Sora", sans-serif;
+      font-size: clamp(1rem, 2.2vw, 1.45rem);
+      font-weight: 700; color: var(--accent); word-break: break-all;
+    }
+    .scenario-intent {
+      margin-top: 6px; font-size: .85rem;
+      color: var(--ink); line-height: 1.5; opacity: .85;
+    }
+    .scenario-next {
+      margin-top: 8px; font-size: .72rem; color: var(--muted);
+    }
+    .scenario-next strong { color: var(--accent); font-weight: 600; }
+    .scenario-status { text-align: right; min-width: 130px; flex-shrink: 0; }
+    .scenario-health {
+      font-family: "Sora", sans-serif; font-size: 1.05rem; font-weight: 700;
+    }
+    .scenario-revision {
+      margin-top: 4px; font-size: .7rem;
+      color: var(--muted); font-family: monospace;
+    }
+
+    /* ── SIGNALS grid ── */
+    .signals-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 10px;
+    }
+
+    /* ── Traffic split bar ── */
+    .split-bar-wrap {
+      margin-top: 10px; height: 6px;
+      background: var(--line); border-radius: 3px;
+      overflow: hidden; display: flex;
+    }
+    .split-bar-v1 { height: 100%; background: var(--nx-blue);  transition: width 1.2s ease; }
+    .split-bar-v2 { height: 100%; background: var(--nx-green); transition: width 1.2s ease; }
+    .split-legend {
+      margin-top: 6px; display: flex; gap: 10px; font-size: .7rem; color: var(--muted);
+    }
+    .split-legend span { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-v1 { background: var(--nx-blue); }
+    .dot-v2 { background: var(--nx-green); }
+
+    /* ── Policy mode badge ── */
+    .mode-badge {
+      display: inline-block; margin-top: 6px;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: .65rem; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+    }
+    .mode-dryrun {
+      background: rgba(96,144,184,.15); color: var(--muted);
+      border: 1px solid var(--line);
+    }
+    .mode-deny {
+      background: rgba(255,82,82,.12); color: var(--bad);
+      border: 1px solid rgba(255,82,82,.35);
+    }
+
+    /* ── Progress bars ── */
+    .bar-wrap {
+      margin-top: 10px; height: 5px;
+      background: var(--line); border-radius: 3px; overflow: hidden;
+    }
+    .bar {
+      height: 100%; border-radius: 3px;
+      transition: width 1.2s ease, background 1.2s ease; width: 0%;
     }
 
     /* ── Platform access ── */
     .links-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 10px;
     }
-    .link-card { display: flex; flex-direction: column; gap: 8px; }
+    .link-card { display: flex; flex-direction: column; gap: 6px; }
     .link-row  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .pill {
-      display: inline-block;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      padding: 3px 10px;
-      font-size: .72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .05em;
+      display: inline-block; border-radius: 999px;
+      border: 1px solid var(--line); padding: 2px 9px;
+      font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0;
     }
     a.link {
-      color: var(--nx-blue);
-      text-decoration: none;
-      border-bottom: 1px dotted rgba(0,145,218,.5);
-      word-break: break-all;
+      color: var(--nx-blue); text-decoration: none; font-size: .82rem;
+      border-bottom: 1px dotted rgba(0,145,218,.4); word-break: break-all;
     }
-    .hint {
-      color: var(--muted);
-      font-size: .83rem;
-      line-height: 1.4;
-    }
+    .hint { color: var(--muted); font-size: .78rem; line-height: 1.4; }
     .cmd {
-      margin: 0;
-      font-size: .76rem;
-      color: #bfd2ec;
-      background: #0a1522;
-      border: 1px solid #23374f;
-      border-radius: 8px;
-      padding: 8px;
-      white-space: pre-wrap;
-      word-break: break-all;
+      margin: 0; font-size: .71rem; color: #bfd2ec;
+      background: #0a1522; border: 1px solid #23374f;
+      border-radius: 7px; padding: 7px 9px;
+      white-space: pre-wrap; word-break: break-all;
     }
 
+    /* ── Status colours ── */
+    .good { color: var(--good); }
+    .bad  { color: var(--bad);  }
+    .warn { color: var(--warn); }
+
     /* ── Error & footer ── */
-    .error {
-      margin-top: 8px;
-      color: var(--bad);
-      white-space: pre-wrap;
-      font-size: .88rem;
-    }
+    .error { margin-top: 8px; color: var(--bad); white-space: pre-wrap; font-size: .85rem; }
     footer {
-      margin-top: 28px;
-      padding-top: 14px;
-      border-top: 1px solid var(--line);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-size: .76rem;
+      margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: .72rem;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
 
+    <!-- ── Header ── -->
     <div class="top">
       <div class="brand">
         <span class="brand-mark">NX</span>
         <h1 class="title">NKP Demo Wall</h1>
       </div>
-      <div class="stamp">Auto-refresh 5s &nbsp;&middot;&nbsp; Last update: <span id="updatedAt">-</span></div>
+      <div class="stamp">Auto-refresh 5 s &nbsp;·&nbsp; Updated: <span id="updatedAt">-</span></div>
     </div>
 
-    <p class="section-label">Live Status</p>
-    <section class="cards">
-      <article class="card">
-        <div class="label">Scenario</div>
-        <div id="scenario" class="value">-</div>
-        <div id="revision" class="sub">-</div>
-        <div id="intent" class="intent"></div>
-        <div id="nextScenario" class="next-hint"></div>
-      </article>
-      <article class="card">
-        <div class="label">CD Status</div>
-        <div id="cdStatus" class="value">-</div>
-      </article>
-      <article class="card">
-        <div class="label">Traffic</div>
-        <div id="traffic" class="value">-</div>
-        <div id="loadgen" class="sub">-</div>
-      </article>
-      <article class="card">
-        <div class="label">Policy</div>
-        <div id="policy" class="value">-</div>
-      </article>
-      <article class="card" id="quotaCard" style="display:none">
-        <div class="label">Namespace Quota</div>
-        <div id="quotaStatus" class="value">-</div>
-        <div id="quotaDetail" class="sub">-</div>
-        <div class="quota-bar-wrap"><div id="quotaBar" class="quota-bar"></div></div>
-      </article>
-      <article class="card" id="kedaCard" style="display:none">
-        <div class="label">Autoscaler (KEDA)</div>
-        <div id="kedaStatus" class="value">-</div>
-        <div id="kedaReplicas" class="sub">-</div>
-        <div class="keda-bar-wrap"><div id="kedaBar" class="keda-bar"></div></div>
-      </article>
+    <!-- ── Scenario hero ── -->
+    <p class="section-label">Scenario</p>
+    <section class="section">
+      <div class="card">
+        <div class="scenario-hero">
+          <div>
+            <div class="scenario-branch" id="scenarioBranch">-</div>
+            <div class="scenario-intent" id="scenarioIntent"></div>
+            <div class="scenario-next"   id="scenarioNext"></div>
+          </div>
+          <div class="scenario-status">
+            <div class="scenario-health"   id="cdHealth">-</div>
+            <div class="scenario-revision" id="cdRevision"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <p class="section-label">KPIs</p>
-    <section class="kpi-grid" id="kpiCards"></section>
+    <!-- ── Live Signals ── -->
+    <p class="section-label">Live Signals</p>
+    <section class="section">
+      <div class="signals-grid">
 
+        <!-- Traffic -->
+        <div class="card">
+          <div class="card-label">Traffic Split</div>
+          <div class="card-value" id="trafficValue">-</div>
+          <div class="split-bar-wrap">
+            <div class="split-bar-v1" id="splitBarV1" style="width:100%"></div>
+            <div class="split-bar-v2" id="splitBarV2" style="width:0%"></div>
+          </div>
+          <div class="split-legend">
+            <span><span class="dot dot-v1"></span>v1</span>
+            <span><span class="dot dot-v2"></span>v2</span>
+          </div>
+          <div class="card-sub" id="loadgenSub">-</div>
+        </div>
+
+        <!-- Policy -->
+        <div class="card">
+          <div class="card-label">Policy</div>
+          <div class="card-value" id="policyValue">-</div>
+          <div class="mode-badge mode-dryrun" id="policyMode">dryrun</div>
+          <div class="card-sub" id="policySub"></div>
+        </div>
+
+        <!-- Quota (visible when ResourceQuota exists) -->
+        <div class="card" id="quotaCard" style="display:none">
+          <div class="card-label">Namespace Quota</div>
+          <div class="card-value" id="quotaValue">-</div>
+          <div class="bar-wrap"><div class="bar" id="quotaBar"></div></div>
+          <div class="card-sub" id="quotaSub">-</div>
+        </div>
+
+        <!-- KEDA (visible only on scenario/keda-checkout) -->
+        <div class="card" id="kedaCard" style="display:none">
+          <div class="card-label">Autoscaler (KEDA)</div>
+          <div class="card-value" id="kedaValue">-</div>
+          <div class="bar-wrap"><div class="bar" id="kedaBar" style="background:var(--nx-green)"></div></div>
+          <div class="card-sub" id="kedaSub">-</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Platform Access ── -->
     <p class="section-label">Platform Access</p>
-    <section class="card">
+    <section class="section card">
       <div id="linksGrid" class="links-grid"></div>
     </section>
 
@@ -293,43 +284,13 @@
   </div>
 
   <script>
-    function statusClass(v) {
+    function cls(v) {
       if (v === "good" || v === "Healthy" || v === "Synced" || v === "ready") return "good";
-      if (v === "bad" || v === "Degraded" || v === "Missing") return "bad";
+      if (v === "bad"  || v === "Degraded" || v === "Missing") return "bad";
       return "warn";
     }
-
-    function safe(v) {
-      return (v === undefined || v === null || v === "") ? "-" : String(v);
-    }
-
-    function setText(id, value, klass) {
-      const el = document.getElementById(id);
-      el.textContent = safe(value);
-      el.className = (id === "revision" || id === "loadgen") ? "sub " + (klass || "") : "value " + (klass || "");
-    }
-
-    function shortSha(v) {
-      const s = safe(v);
-      if (s === "-") return s;
-      return s.length > 12 ? s.slice(0, 12) : s;
-    }
-
-    function renderKpis(items) {
-      const kpiCards = document.getElementById("kpiCards");
-      kpiCards.innerHTML = "";
-      (items || []).forEach(k => {
-        const card = document.createElement("article");
-        card.className = "card";
-        const cls = statusClass(k.status);
-        card.innerHTML = `
-          <div class="label">${safe(k.name)}</div>
-          <div class="value ${cls}">${safe(k.value)}</div>
-          <div class="sub">Target: ${safe(k.threshold)}</div>
-        `;
-        kpiCards.appendChild(card);
-      });
-    }
+    function safe(v) { return (v == null || v === "") ? "-" : String(v); }
+    function shortSha(v) { const s = safe(v); return (s !== "-" && s.length > 12) ? s.slice(0,12) : s; }
 
     function renderLinks(items) {
       const grid = document.getElementById("linksGrid");
@@ -339,7 +300,7 @@
         card.className = "card link-card";
 
         const title = document.createElement("div");
-        title.className = "label";
+        title.className = "card-label";
         title.textContent = safe(link.name);
         card.appendChild(title);
 
@@ -347,49 +308,23 @@
         row.className = "link-row";
 
         const badge = document.createElement("span");
-        badge.className = "pill " + statusClass(link.status);
+        badge.className = "pill " + cls(link.status);
         badge.textContent = safe(link.status);
         row.appendChild(badge);
 
         if (link.url) {
           const a = document.createElement("a");
-          a.className = "link";
-          a.href = link.url;
-          a.target = "_blank";
-          a.rel = "noreferrer";
+          a.className = "link"; a.href = link.url;
+          a.target = "_blank"; a.rel = "noreferrer";
           a.textContent = link.url;
           row.appendChild(a);
         }
-
         card.appendChild(row);
 
-        if (link.hint) {
-          const hint = document.createElement("div");
-          hint.className = "hint";
-          hint.textContent = link.hint;
-          card.appendChild(hint);
-        }
-
-        if (link.username) {
-          const user = document.createElement("div");
-          user.className = "hint";
-          user.textContent = `Username: ${link.username}`;
-          card.appendChild(user);
-        }
-
-        if (link.password) {
-          const pass = document.createElement("pre");
-          pass.className = "cmd";
-          pass.textContent = `Password: ${link.password}`;
-          card.appendChild(pass);
-        }
-
-        if (link.command) {
-          const cmd = document.createElement("pre");
-          cmd.className = "cmd";
-          cmd.textContent = link.command;
-          card.appendChild(cmd);
-        }
+        if (link.hint)     { const d = document.createElement("div"); d.className = "hint"; d.textContent = link.hint; card.appendChild(d); }
+        if (link.username) { const d = document.createElement("div"); d.className = "hint"; d.textContent = "Username: " + link.username; card.appendChild(d); }
+        if (link.password) { const d = document.createElement("pre"); d.className = "cmd";  d.textContent = "Password: " + link.password; card.appendChild(d); }
+        if (link.command)  { const d = document.createElement("pre"); d.className = "cmd";  d.textContent = link.command; card.appendChild(d); }
 
         grid.appendChild(card);
       });
@@ -398,97 +333,104 @@
     function render(data) {
       document.getElementById("updatedAt").textContent = new Date(data.now).toLocaleTimeString();
 
+      // ── Scenario hero ──
       const cd = data.cd || {};
-      setText("scenario", cd.branch, "");
-      setText("revision", `Revision: ${shortSha(cd.revision)}`, "");
+      const branchEl = document.getElementById("scenarioBranch");
+      if (branchEl) branchEl.textContent = safe(cd.branch);
 
-      const intentEl = document.getElementById("intent");
+      const intentEl = document.getElementById("scenarioIntent");
       if (intentEl) intentEl.textContent = cd.intent || "";
 
-      const nextEl = document.getElementById("nextScenario");
-      if (nextEl) {
-        nextEl.innerHTML = cd.next
-          ? `Next \u2192 <strong>${cd.next}</strong>`
-          : "";
+      const nextEl = document.getElementById("scenarioNext");
+      if (nextEl) nextEl.innerHTML = cd.next ? `Next \u2192 <strong>${cd.next}</strong>` : "";
+
+      const healthEl = document.getElementById("cdHealth");
+      if (healthEl) {
+        healthEl.textContent = `${safe(cd.sync)} / ${safe(cd.health)}`;
+        healthEl.className = "scenario-health " + cls(cd.health);
       }
+      const revEl = document.getElementById("cdRevision");
+      if (revEl) revEl.textContent = shortSha(cd.revision) !== "-" ? "rev " + shortSha(cd.revision) : "";
 
-      const cdStatus = `${safe(cd.sync)} / ${safe(cd.health)}`;
-      setText("cdStatus", cdStatus, statusClass(cd.health));
-
+      // ── Traffic ──
       const canary = data.canary || {};
-      setText("traffic", `v1 / v2 = ${safe(canary.v1)} / ${safe(canary.v2)}`, "");
+      const v1 = Number(canary.v1 || 0), v2 = Number(canary.v2 || 0);
+      const tvEl = document.getElementById("trafficValue");
+      if (tvEl) tvEl.textContent = `v1 ${v1}%  ·  v2 ${v2}%`;
+      const bv1 = document.getElementById("splitBarV1"), bv2 = document.getElementById("splitBarV2");
+      if (bv1) bv1.style.width = v1 + "%";
+      if (bv2) bv2.style.width = v2 + "%";
 
       const lg = data.loadgen || {};
-      setText("loadgen", `Loadgen: ${safe(lg.desiredReplicas)}/${safe(lg.readyReplicas)} (${safe(lg.profile)})`, "");
+      const lgEl = document.getElementById("loadgenSub");
+      if (lgEl) lgEl.textContent = `Loadgen: ${safe(lg.desiredReplicas)}/${safe(lg.readyReplicas)} (${safe(lg.profile)})`;
 
+      // ── Policy ──
       const policy = data.policy || {};
-      setText("policy", `${safe(policy.compliance)}% (${safe(policy.status)})`, statusClass(policy.status));
+      const pvEl = document.getElementById("policyValue");
+      if (pvEl) { pvEl.textContent = safe(policy.compliance) + "%"; pvEl.className = "card-value " + cls(policy.status); }
 
+      const modeEl = document.getElementById("policyMode");
+      if (modeEl) {
+        const enforcing = !!policy.enforcing;
+        modeEl.textContent = enforcing ? "deny" : "dryrun";
+        modeEl.className = "mode-badge " + (enforcing ? "mode-deny" : "mode-dryrun");
+      }
+      const psEl = document.getElementById("policySub");
+      if (psEl) {
+        const v = Number(policy.warn || 0);
+        psEl.textContent = v > 0 ? `${v} violation${v > 1 ? "s" : ""}` : "No violations";
+      }
+
+      // ── Quota ──
       const quota = data.quota || {};
       const quotaCard = document.getElementById("quotaCard");
       if (quotaCard) {
         if (quota.available) {
           quotaCard.style.display = "";
           const p = quota.pods || {};
-          const quotaStatusEl = document.getElementById("quotaStatus");
-          if (quotaStatusEl) {
-            quotaStatusEl.textContent = `${p.used} / ${p.hard} pods  (${p.pct}%)`;
-            quotaStatusEl.className = "value " + (p.status === "good" ? "good" : p.status === "warn" ? "warn" : "bad");
+          const qvEl = document.getElementById("quotaValue");
+          if (qvEl) { qvEl.textContent = `${p.used} / ${p.hard} pods`; qvEl.className = "card-value " + (p.status || "good"); }
+          const qbEl = document.getElementById("quotaBar");
+          if (qbEl) {
+            qbEl.style.width = p.pct + "%";
+            qbEl.style.background = p.status === "good" ? "var(--good)" : p.status === "warn" ? "var(--warn)" : "var(--bad)";
           }
-          const quotaDetailEl = document.getElementById("quotaDetail");
-          if (quotaDetailEl) {
-            const cpu = quota.cpu || {};
-            const mem = quota.mem || {};
-            quotaDetailEl.textContent = `CPU req: ${cpu.used} / ${cpu.hard} cores  \u00b7  Mem req: ${mem.used} / ${mem.hard} Mi`;
-          }
-          const quotaBar = document.getElementById("quotaBar");
-          if (quotaBar) {
-            quotaBar.style.width = p.pct + "%";
-            quotaBar.style.background = p.status === "good"
-              ? "var(--good)" : p.status === "warn"
-              ? "var(--warn)" : "var(--bad)";
+          const qsEl = document.getElementById("quotaSub");
+          if (qsEl) {
+            const cpu = quota.cpu || {}, mem = quota.mem || {};
+            qsEl.textContent = `${p.pct}% used  ·  CPU ${cpu.used}/${cpu.hard}  ·  Mem ${mem.used}/${mem.hard} Mi`;
           }
         } else {
           quotaCard.style.display = "none";
         }
       }
 
+      // ── KEDA ──
       const keda = data.keda || {};
       const kedaCard = document.getElementById("kedaCard");
       if (kedaCard) {
         if (keda.enabled) {
           kedaCard.style.display = "";
-          const kedaStatusEl = document.getElementById("kedaStatus");
-          if (kedaStatusEl) {
-            kedaStatusEl.textContent = keda.active ? "Active \u2191 scaling" : "Idle \u00b7 scaled to zero";
-            kedaStatusEl.className = "value " + (keda.active ? "good" : "warn");
-          }
-          const kedaReplicasEl = document.getElementById("kedaReplicas");
-          if (kedaReplicasEl) {
-            kedaReplicasEl.textContent = `checkout-api-v1: ${keda.currentReplicas} ready  \u00b7  range: ${keda.minReplicas}\u2013${keda.maxReplicas}`;
-          }
-          const kedaBar = document.getElementById("kedaBar");
-          if (kedaBar) {
-            const pct = keda.maxReplicas > 0
-              ? Math.round((keda.currentReplicas / keda.maxReplicas) * 100)
-              : 0;
-            kedaBar.style.width = pct + "%";
-          }
+          const kvEl = document.getElementById("kedaValue");
+          if (kvEl) { kvEl.textContent = keda.active ? "Active \u2191 scaling" : "Idle \u00b7 scaled to zero"; kvEl.className = "card-value " + (keda.active ? "good" : "warn"); }
+          const kbEl = document.getElementById("kedaBar");
+          if (kbEl) { const pct = keda.maxReplicas > 0 ? Math.round(keda.currentReplicas / keda.maxReplicas * 100) : 0; kbEl.style.width = pct + "%"; }
+          const ksEl = document.getElementById("kedaSub");
+          if (ksEl) ksEl.textContent = `checkout-api: ${keda.currentReplicas} ready  ·  range ${keda.minReplicas}\u2013${keda.maxReplicas}`;
         } else {
           kedaCard.style.display = "none";
         }
       }
 
-      renderKpis(data.kpi || []);
       renderLinks(data.links || []);
-
       document.getElementById("error").textContent = "";
     }
 
     async function tick() {
       try {
         const res = await fetch("/api/status", { cache: "no-store" });
-        if (!res.ok) throw new Error(`status ${res.status}`);
+        if (!res.ok) throw new Error("status " + res.status);
         render(await res.json());
       } catch (err) {
         document.getElementById("error").textContent = "Status fetch failed: " + err;
