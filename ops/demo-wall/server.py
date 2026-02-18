@@ -388,13 +388,15 @@ def build_quick_links():
                 kommander_platform_base = base
 
     # Try to discover the management-cluster platform hostname from the SSO redirect.
-    # This lets us publish a valid, browser-friendly Kommander UI URL (sslip) instead of an IP/404 root.
+    # This lets us publish a valid, browser-friendly Kommander UI URL instead of a raw IP/404 root.
     if not kommander_platform_base and (kommander_ingress_probe or kommander_ingress_base):
         probe = kommander_ingress_probe or f"{kommander_ingress_base}/dkp/kubernetes"
         loc = _http_location(probe, insecure_tls=True)
         base = _url_base(loc)
-        # Avoid poisoning platform_base with redirects back to the workload ingress itself.
-        if base and "sslip" in base:
+        # Accept the redirect as long as it isn't pointing back at the workload ingress itself.
+        # (Previously filtered for "sslip" only — this is now cluster-agnostic.)
+        workload_base = kommander_ingress_base.rstrip("/")
+        if base and base.rstrip("/") != workload_base:
             kommander_platform_base = base
 
     # Demo app
@@ -442,7 +444,7 @@ def build_quick_links():
             argo_url or "https://localhost:8443/",
             "ready" if argo_url else "local",
             "GitOps control plane",
-            "kubectl -n argocd port-forward svc/argocd-server 8443:443",
+            "" if argo_url else "kubectl -n argocd port-forward svc/argocd-server 8443:443",
             argocd_user,
             argocd_pass,
         ))
@@ -527,14 +529,14 @@ def build_quick_links():
                 password=kommander_sso_pass,
             ))
 
-    # Grafana
-    grafana_ing = f"{kommander_ingress_base}/dkp/logging/grafana" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "grafana-logging")
+    # Grafana — use /dkp/grafana (metrics/Prometheus Grafana) not /dkp/logging/grafana (Loki)
+    grafana_ing = f"{kommander_ingress_base}/dkp/grafana" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "grafana-logging")
     if grafana_ing:
         links.append(_build_link(
             "Grafana",
             grafana_ing,
             "ready",
-            "Dashboards and metrics (via Kommander ingress + SSO)",
+            "RED metrics & dashboards (via Kommander ingress + SSO)",
             username=kommander_sso_user,
             password=kommander_sso_pass,
         ))
