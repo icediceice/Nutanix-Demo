@@ -565,6 +565,30 @@ def build_quick_links():
     return links
 
 
+def get_keda_status():
+    """Return KEDA ScaledObject state for checkout-api-v1; {enabled:False} when not present."""
+    so = k8s_get_json("/apis/keda.sh/v1alpha1/namespaces/demo-app/scaledobjects/checkout-api-v1-keda")
+    if "_error" in so:
+        return {"enabled": False}
+
+    conditions = get_nested(so, ["status", "conditions"], []) or []
+    active = any(
+        c.get("type") == "Active" and c.get("status") == "True"
+        for c in conditions
+    )
+
+    deploy = k8s_get_json("/apis/apps/v1/namespaces/demo-app/deployments/checkout-api-v1")
+    current = 0 if "_error" in deploy else (get_nested(deploy, ["status", "readyReplicas"], 0) or 0)
+
+    return {
+        "enabled": True,
+        "active": active,
+        "currentReplicas": current,
+        "minReplicas": get_nested(so, ["spec", "minReplicaCount"], 0),
+        "maxReplicas": get_nested(so, ["spec", "maxReplicaCount"], 10),
+    }
+
+
 def build_payload():
     # ArgoCD app status
     app = k8s_get_json("/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo")
@@ -617,6 +641,7 @@ def build_payload():
     cd_ok = (sync_status == "Synced" and health_status == "Healthy")
     cd_rate = 100.0 if cd_ok else (50.0 if health_status in ("Progressing", "Suspended") else 0.0)
     links = build_quick_links()
+    keda = get_keda_status()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -649,6 +674,7 @@ def build_payload():
             {"name": "Canary Weight v2", "value": f"{w2}%", "status": "good", "threshold": "informational"},
             {"name": "Policy Compliance", "value": f"{compliance}%", "status": policy_status, "threshold": ">= 95%"},
         ],
+        "keda": keda,
         "links": links,
     }
 
