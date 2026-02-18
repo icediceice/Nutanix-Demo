@@ -285,78 +285,65 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
     </section>
 
     <!-- Environment setup -->
-    <p class="section-label">Environment Setup</p>
+    <p class="section-label">How Credentials Are Discovered</p>
     <section class="section env-block">
-      <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">
-        Set these environment variables on the <code>demo-wall</code> Deployment so credentials appear on this page and the Demo Wall.
-        The secrets are read at startup; restart the pod after patching.
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:12px;">
+        The Demo Wall reads credentials <strong style="color:var(--ink);">automatically from cluster secrets</strong> — no manual setup required.
+        If a password field above is blank, check that the relevant secret exists on this cluster.
       </div>
       <table class="env-table">
         <thead>
-          <tr><th>Variable</th><th>Required for</th><th>How to get it</th></tr>
+          <tr><th>Credential</th><th>Auto-discovered from</th><th>Fallback env var</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td><span class="env-key">KOMMANDER_SSO_USERNAME</span></td>
-            <td>Kiali, Jaeger, Grafana, Kommander</td>
-            <td><span class="env-how">Typically <code>admin</code>. Confirm with your Kommander SSO config.</span></td>
-          </tr>
-          <tr>
-            <td><span class="env-key">KOMMANDER_SSO_PASSWORD</span></td>
-            <td>Kiali, Jaeger, Grafana, Kommander</td>
+            <td><span class="env-key">ArgoCD password</span></td>
             <td>
               <span class="env-how">
-                <code>kubectl -n kommander-default-workspace get secret dex-k8s-authenticator-secret -o jsonpath='{.data.client_secret}' | base64 -d</code>
-                <br>or check your cluster's SSO secret.
+                <code>argocd / argocd-initial-admin-secret</code> → key <code>password</code>
               </span>
             </td>
+            <td><span class="env-how"><code>ARGOCD_PASSWORD</code></span></td>
           </tr>
           <tr>
-            <td><span class="env-key">ARGOCD_USERNAME</span></td>
-            <td>ArgoCD</td>
-            <td><span class="env-how">Defaults to <code>admin</code> if unset.</span></td>
-          </tr>
-          <tr>
-            <td><span class="env-key">ARGOCD_PASSWORD</span></td>
-            <td>ArgoCD</td>
+            <td><span class="env-key">Kommander / NKP SSO password</span></td>
             <td>
               <span class="env-how">
-                <code>kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d</code>
+                <code>kommander-default-workspace / dkp-admin-user-password</code> → <code>password</code>
+                <br>then <code>kommander / dkp-admin-user-password</code>
               </span>
             </td>
+            <td><span class="env-how"><code>KOMMANDER_SSO_PASSWORD</code></span></td>
           </tr>
           <tr>
-            <td><span class="env-key">KOMMANDER_PLATFORM_BASE</span></td>
-            <td>Kommander URL auto-discovery</td>
-            <td>
-              <span class="env-how">
-                Optional. If the Kommander URL shows wrong, override with
-                <code>https://&lt;cluster-hostname&gt;</code>
-                (the sslip.nutanixdemo.com hostname).
-              </span>
-            </td>
+            <td><span class="env-key">ArgoCD username</span></td>
+            <td><span class="env-how">Hardcoded <code>admin</code> (standard for ArgoCD)</span></td>
+            <td><span class="env-how"><code>ARGOCD_USERNAME</code></span></td>
           </tr>
           <tr>
-            <td><span class="env-key">JAEGER_QUERY_URL</span></td>
-            <td>Storefront trace deep-links</td>
-            <td>
-              <span class="env-how">
-                Set on the <strong>storefront Deployment</strong> (not demo-wall).
-                Use the Jaeger UI URL from Platform Access above.
-              </span>
-            </td>
+            <td><span class="env-key">Kommander SSO username</span></td>
+            <td><span class="env-how">Defaults to <code>admin</code></span></td>
+            <td><span class="env-how"><code>KOMMANDER_SSO_USERNAME</code></span></td>
+          </tr>
+          <tr>
+            <td><span class="env-key">Kommander URL</span></td>
+            <td><span class="env-how">Auto-discovered via <code>traefik-forward-auth-configmap</code> provider-uri and SSO redirect probe</span></td>
+            <td><span class="env-how"><code>KOMMANDER_PLATFORM_BASE</code> (override if URL resolves wrong)</span></td>
+          </tr>
+          <tr>
+            <td><span class="env-key">Storefront trace links</span></td>
+            <td><span class="env-how">Not applicable — set <code>JAEGER_QUERY_URL</code> on the <strong>storefront Deployment</strong> to enable deep-links</span></td>
+            <td><span class="env-how"><code>JAEGER_QUERY_URL</code> on frontend</span></td>
           </tr>
         </tbody>
       </table>
-      <div style="margin-top:14px;font-size:.78rem;color:var(--muted);">
-        Create (or update) the <code>demo-wall-access</code> Secret — credentials are read from here at pod startup:
-        <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;">kubectl -n demo-ops create secret generic demo-wall-access \
-  --from-literal=kommander_username=admin \
-  --from-literal=kommander_password='&lt;password&gt;' \
-  --from-literal=argocd_username=admin \
-  --from-literal=argocd_password='&lt;password&gt;' \
-  --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n demo-ops rollout restart deployment/demo-wall</pre>
+      <div style="margin-top:14px;font-size:.78rem;color:var(--muted);line-height:1.5;">
+        If a password doesn't appear, verify the secret exists:
+        <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;"># ArgoCD
+kubectl -n argocd get secret argocd-initial-admin-secret
+
+# Kommander / NKP SSO
+kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
       </div>
     </section>
 
