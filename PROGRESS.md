@@ -83,7 +83,7 @@ Priority: **High** = do next session | **Med** = plan soon | **Low** = nice to h
 | 8 | Consolidated operator docs | High | ✅ Done | `partner/DEMO-GUIDE.md` |
 | 9 | Favicon (Nutanix X mark, 32×32 SVG) | Low | ⏳ Planned | Inline SVG data URI in both demo-wall/index.html and the storefront template |
 | 10 | Demo Wall kiosk mode (`?kiosk=1`) | Low | ⏳ Planned | CSS only — hides header/footer for TV display |
-| 11 | KEDA autoscaler card in Demo Wall | Low | ⏳ Planned | Conditional on `scenario/keda-checkout` being active; check for ScaledObject existence |
+| 11 | KEDA autoscaler card in Demo Wall | Low | ✅ Done | `get_keda_status()` in server.py; card hidden on non-KEDA branches; replica bar + Active/Idle state |
 | 12 | Storefront "Refresh Trace" button | Low | ⏭️ Skipped | Covered by #1 (checkout already shows fresh trace) |
 
 ---
