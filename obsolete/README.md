@@ -13,3 +13,5 @@ Do not use them as the source of truth for running the demo.
 | `kpi-README.md` | `PROGRESS.md`, `partner/DEMO-GUIDE.md` |
 | `WOW.md` | `PROGRESS.md` |
 | `AGENTS.md` | `CLAUDE.md` |
+| `argocd-quickstart.md` | `partner/DEMO-GUIDE.md §1` |
+| `demo-operator-runbook.md` | `partner/DEMO-GUIDE.md §3` |

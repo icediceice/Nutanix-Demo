@@ -19,9 +19,8 @@ To avoid token waste:
 ## 1. What This Repo Is
 Nutanix NKP Rx GitOps demo repository. It is designed to be operated by switching branches (for example, `scenario/baseline` to `scenario/incident-error`) rather than editing live manifests in-cluster.
 
-Primary operator entrypoints:
-- Demo runbooks: `partner/RUNBOOK.md`, `partner/QUICKSTART.md`
-- Scenario list: `partner/SCENARIOS.md`
+Primary operator entrypoint:
+- Complete operator guide (setup, demo flow, commands): `partner/DEMO-GUIDE.md`
 
 ## 2. Control Plane Model (Branch-Driven GitOps)
 The demo is controlled by ArgoCD:
@@ -56,7 +55,7 @@ Examples of what scenarios do:
 - Load: switch loadgen overlays (baseline/peak/off).
 - Optional: KEDA scenario installs KEDA resources and uses a Prometheus endpoint ConfigMap (see `platform/keda` and `docs/keda.md`).
 
-Canonical scenario list: `partner/SCENARIOS.md`.
+Canonical scenario list: `partner/DEMO-GUIDE.md §4`.
 
 ## 5. Key Components (App, Mesh, Load, Policies, Demo Wall)
 Load only the subtopic you need:
@@ -89,7 +88,7 @@ Typical approach:
    - `apps/otel-shop-lite/kustomization.yaml`
    - `mesh/istio/kustomization.yaml`
    - `ops/loadgen/kustomization.yaml`
-4. Update the scenario list: `partner/SCENARIOS.md`.
+4. Update the scenario table: `partner/DEMO-GUIDE.md §4`.
 
 ### 6.2 Change Canary Weights
 - Edit or add Istio overlay under `mesh/istio/overlays/`.
@@ -111,7 +110,7 @@ Typical approach:
 
 ## 8. Further References
 - Full specification (more detailed than this doc): `docs/demo-spec.md`
-- Operator checklist: `docs/verification-checklist.md`
-- KEDA notes: `docs/keda.md`
-- Operator runbook (brief): `docs/demo-operator-runbook.md`
+- Pre-flight / day-before checklist: `docs/verification-checklist.md`
+- KEDA autoscaling notes: `docs/keda.md`
+- Complete operator guide (setup, demo flow, commands): `partner/DEMO-GUIDE.md`
 
