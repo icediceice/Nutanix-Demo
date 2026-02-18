@@ -21,7 +21,8 @@ Usage:
   ./scripts/bootstrap-demo.sh [--kubeconfig PATH] [--context NAME] [--branch scenario/*] [--repo URL]
                              [--workspace-namespace NS] [--skip-kommander-apps]
                              [--mgmt-kubeconfig PATH] [--mgmt-context NAME]
-                             [--ghcr-username USER] [--ghcr-token-file PATH]
+                             [--workload-cluster-name NAME]
+                             [--discover-prometheus]
 
 What it does:
   1) (Optional) Enables required Kommander apps (Istio/Kiali/Jaeger) via AppDeployment (no UI clicks).
@@ -30,6 +31,8 @@ What it does:
   2) Installs ArgoCD (LoadBalancer service) from clusters/rx-demo/argocd/bootstrap.
   3) Creates ArgoCD AppProject + Application and points it at a scenario branch.
   4) Prints the URLs/commands to access ArgoCD, the Demo App, and Demo Wall.
+  5) (Optional) If --discover-prometheus is set and you are using a KEDA scenario branch, attempts to auto-set
+     demo-app/ConfigMap keda-prometheus to a reachable Prometheus endpoint.
 EOF
 }
 
@@ -41,11 +44,11 @@ KUBECONFIG_PATH=""
 CONTEXT_NAME=""
 MGMT_KUBECONFIG_PATH=""
 MGMT_CONTEXT_NAME=""
+WORKLOAD_CLUSTER_NAME=""
 REPO_URL="$REPO_URL_DEFAULT"
 BRANCH="$BRANCH_DEFAULT"
 SKIP_KOMMANDER_APPS=0
-GHCR_USERNAME_ARG=""
-GHCR_TOKEN_FILE=""
+DISCOVER_PROMETHEUS=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -53,12 +56,12 @@ while [[ $# -gt 0 ]]; do
     --context) CONTEXT_NAME="${2:-}"; shift 2 ;;
     --mgmt-kubeconfig|--management-kubeconfig) MGMT_KUBECONFIG_PATH="${2:-}"; shift 2 ;;
     --mgmt-context|--management-context) MGMT_CONTEXT_NAME="${2:-}"; shift 2 ;;
+    --workload-cluster-name) WORKLOAD_CLUSTER_NAME="${2:-}"; shift 2 ;;
     --repo) REPO_URL="${2:-}"; shift 2 ;;
     --branch) BRANCH="${2:-}"; shift 2 ;;
     --workspace-namespace) WORKSPACE_NS="${2:-}"; shift 2 ;;
     --skip-kommander-apps) SKIP_KOMMANDER_APPS=1; shift 1 ;;
-    --ghcr-username) GHCR_USERNAME_ARG="${2:-}"; shift 2 ;;
-    --ghcr-token-file) GHCR_TOKEN_FILE="${2:-}"; shift 2 ;;
+    --discover-prometheus) DISCOVER_PROMETHEUS=1; shift 1 ;;
     -h|--help) usage; exit 0 ;;
     *) fail "unknown arg: $1 (use --help)" ;;
   esac
@@ -135,59 +138,26 @@ kc_mgmt() {
   "$KUBECTL" "${args[@]}" "$@"
 }
 
-ensure_ghcr_pull_secret() {
-  # Demo app images may be private in GHCR; if so, workloads will stay in ImagePullBackOff until a pull secret exists.
-  local ns="demo-app"
-  local secret="ghcr-pull"
-  local user="${GHCR_USERNAME_ARG:-${GHCR_USERNAME:-icediceice}}"
-  local token="${GHCR_TOKEN:-}"
-
-  if kc -n "${ns}" get secret "${secret}" >/dev/null 2>&1; then
-    echo "${ns}/secret ${secret}: present"
+maybe_set_keda_prometheus_endpoint() {
+  # Best-effort only. Requires the discovery script and a KEDA scenario branch.
+  if [[ "${DISCOVER_PROMETHEUS}" -ne 1 ]]; then
+    return 0
+  fi
+  if [[ "${BRANCH}" != scenario/keda-* ]]; then
+    return 0
+  fi
+  if [[ ! -f "${SCRIPT_DIR}/discover-prometheus.sh" ]]; then
+    warn "discover-prometheus.sh not found; skipping Prometheus endpoint discovery"
     return 0
   fi
 
-  # Make a best-effort to ensure the namespace exists so the secret can be applied early.
-  if ! kc get ns "${ns}" >/dev/null 2>&1; then
-    kc create ns "${ns}" >/dev/null 2>&1 || true
-  fi
+  local args=()
+  if [[ -n "${KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${KUBECONFIG_PATH}"); fi
+  if [[ -n "${CONTEXT_NAME}" ]]; then args+=(--context "${CONTEXT_NAME}"); fi
 
-  # Prefer a token file if provided (safer than flags/env because it won't show up in shell history/process list).
-  if [[ -z "${token}" && -n "${GHCR_TOKEN_FILE}" ]]; then
-    if [[ -f "${GHCR_TOKEN_FILE}" ]]; then
-      token="$(tr -d '\r\n' < "${GHCR_TOKEN_FILE}" | head -c 4096)"
-    else
-      warn "--ghcr-token-file provided but not found: ${GHCR_TOKEN_FILE}"
-    fi
-  fi
-
-  # Optional convenience: if GitHub CLI is installed and the operator has already authenticated, reuse that token.
-  if [[ -z "${token}" ]] && have gh; then
-    token="$(gh auth token 2>/dev/null || true)"
-  fi
-
-  if [[ -z "${token}" ]]; then
-    warn "${ns}/secret ${secret}: missing. Required if ghcr.io images are private."
-    warn "Provide creds in one of these ways, then re-run:"
-    warn "  1) Token file:"
-    warn "     printf '%s' \"<GHCR_TOKEN>\" > auth/ghcr.token && chmod 600 auth/ghcr.token"
-    warn "     ./scripts/bootstrap-demo.sh ... --ghcr-username ${user} --ghcr-token-file auth/ghcr.token"
-    warn "  2) Env vars:"
-    warn "     export GHCR_USERNAME=${user}"
-    warn "     export GHCR_TOKEN='...'"
-    warn "  3) GitHub CLI:"
-    warn "     gh auth login"
-    return 0
-  fi
-
-  kc -n "${ns}" create secret docker-registry "${secret}" \
-    --docker-server=ghcr.io \
-    --docker-username="${user}" \
-    --docker-password="${token}" \
-    --docker-email="unused@example.com" \
-    --dry-run=client -o yaml | kc apply -f - >/dev/null
-
-  echo "${ns}/secret ${secret}: applied"
+  echo
+  echo "Discovering Prometheus endpoint for KEDA..."
+  "${SCRIPT_DIR}/discover-prometheus.sh" "${args[@]}" --apply || true
 }
 
 kommander_kc() {
@@ -226,6 +196,46 @@ resolve_clusterapp() {
   # Strip prefix and '-' to sort versions, then re-attach the name.
   # shellcheck disable=SC2016
   echo "$candidates" | awk -v p="${prefix}-" '{v=$0; sub(p,"",v); print v "\t" $0}' | sort -V | tail -n 1 | awk '{print $2}'
+}
+
+infer_workload_cluster_name() {
+  if [[ -n "${WORKLOAD_CLUSTER_NAME}" ]]; then
+    return 0
+  fi
+
+  # Best signal when available.
+  local from_label
+  from_label="$(kc get ns kube-system -o jsonpath='{.metadata.labels.kommander\.d2iq\.io/cluster-name}' 2>/dev/null || true)"
+  if [[ -n "${from_label}" ]]; then
+    WORKLOAD_CLUSTER_NAME="${from_label}"
+    return 0
+  fi
+
+  # Common kubeconfig context format: user@cluster-name
+  local ctx
+  ctx="$(kc config current-context 2>/dev/null || true)"
+  if [[ -n "${ctx}" ]]; then
+    if [[ "${ctx}" == *@* ]]; then
+      WORKLOAD_CLUSTER_NAME="${ctx##*@}"
+    else
+      WORKLOAD_CLUSTER_NAME="${ctx}"
+    fi
+  fi
+
+  if [[ -z "${WORKLOAD_CLUSTER_NAME}" ]]; then
+    fail "Could not infer workload cluster name from kubeconfig. Re-run with --workload-cluster-name <name>."
+  fi
+}
+
+validate_workload_cluster_name() {
+  # Ensure the selector will match a joined cluster in this workspace.
+  if kommander_kc -n "${WORKSPACE_NS}" get kommandercluster "${WORKLOAD_CLUSTER_NAME}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local known
+  known="$(kommander_kc -n "${WORKSPACE_NS}" get kommandercluster -o jsonpath='{range .items[*]}{.metadata.name}{" "}{end}' 2>/dev/null || true)"
+  fail "KommanderCluster '${WORKLOAD_CLUSTER_NAME}' was not found in workspace namespace '${WORKSPACE_NS}'. Known clusters: ${known:-none}. Re-run with --workload-cluster-name <name> and correct --workspace-namespace."
 }
 
 enable_kommander_apps() {
@@ -276,6 +286,14 @@ enable_kommander_apps() {
     return 0
   fi
 
+  infer_workload_cluster_name
+  validate_workload_cluster_name
+
+  local istio_ver kiali_ver jaeger_ver
+  istio_ver="${istio_app#istio-helm-}"
+  kiali_ver="${kiali_app#kiali-}"
+  jaeger_ver="${jaeger_app#jaeger-}"
+
   cat <<EOF | kommander_kc apply -f - >/dev/null
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -286,6 +304,21 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${istio_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${istio_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 ---
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -296,6 +329,21 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${kiali_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${kiali_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 ---
 apiVersion: apps.kommander.d2iq.io/v1alpha3
 kind: AppDeployment
@@ -306,9 +354,25 @@ spec:
   appRef:
     kind: ClusterApp
     name: ${jaeger_app}
+  clusterSelector:
+    matchExpressions:
+      - key: kommander.d2iq.io/cluster-name
+        operator: In
+        values:
+          - ${WORKLOAD_CLUSTER_NAME}
+  clusterConfigOverrides:
+    - appVersion: ${jaeger_ver}
+      clusterSelector:
+        matchExpressions:
+          - key: kommander.d2iq.io/cluster-name
+            operator: In
+            values:
+              - ${WORKLOAD_CLUSTER_NAME}
+      configMapName: ""
 EOF
 
   echo "Kommander apps requested via AppDeployment in namespace: ${WORKSPACE_NS}"
+  echo "  selector:  ${WORKLOAD_CLUSTER_NAME}"
   echo "  istio-helm: ${istio_app}"
   echo "  kiali:     ${kiali_app}"
   echo "  jaeger:    ${jaeger_app}"
@@ -385,9 +449,7 @@ kc -n "$ARGO_NS" patch application "$APP_NAME" --type merge \
   -p "{\"spec\":{\"source\":{\"repoURL\":\"${REPO_URL}\",\"targetRevision\":\"${BRANCH}\"}}}" >/dev/null
 kc -n "$ARGO_NS" annotate application "$APP_NAME" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
 
-echo
-echo "Ensuring GHCR pull secret (optional)..."
-ensure_ghcr_pull_secret
+maybe_set_keda_prometheus_endpoint
 
 echo
 echo "ArgoCD:"
