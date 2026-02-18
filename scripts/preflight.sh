@@ -52,6 +52,14 @@ if [[ "$missing_istio" -eq 1 ]]; then
 fi
 
 echo
+echo "KEDA (optional):"
+if "$KUBECTL" get crd scaledobjects.keda.sh >/dev/null 2>&1; then
+  echo "ScaledObject CRD: present"
+else
+  warn "ScaledObject CRD: missing (KEDA not detected). KEDA scenario branch will not work until KEDA is installed."
+fi
+
+echo
 echo "Kommander (optional):"
 if "$KUBECTL" get crd appdeployments.apps.kommander.d2iq.io >/dev/null 2>&1; then
   echo "AppDeployment CRD: present"
@@ -66,14 +74,6 @@ for ns in demo-app demo-ops; do
     warn "missing namespace: $ns (platform will create it)"
   fi
 done
-
-echo
-echo "Registry Secret:"
-if "$KUBECTL" -n demo-app get secret ghcr-pull >/dev/null 2>&1; then
-  echo "demo-app/secret ghcr-pull: present"
-else
-  warn "demo-app/secret ghcr-pull: missing (required if GHCR images are private)"
-fi
 
 echo
 echo "External Access:"
