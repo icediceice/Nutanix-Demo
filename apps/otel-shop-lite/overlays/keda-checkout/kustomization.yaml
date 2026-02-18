@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - ../../versions/v1
+  - ../../versions/v2
+  - keda-prometheus-configmap.yaml
+  - checkout-api-v1-scaledobject.yaml
+patches:
+  - path: payment-mock-v2-fault.yaml
+  - path: checkout-api-v1-replicas-zero.yaml
+  - path: checkout-api-v2-replicas-zero.yaml
+replacements:
+  - source:
+      kind: ConfigMap
+      name: keda-prometheus
+      fieldPath: data.serverAddress
+    targets:
+      - select:
+          kind: ScaledObject
+          name: checkout-api-v1-keda
+        fieldPaths:
+          - spec.triggers.0.metadata.serverAddress

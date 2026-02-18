@@ -16,3 +16,4 @@
 
 ## Optional
 - `scenario/mirror-v2`: mirror to v2, baseline load
+- `scenario/keda-checkout`: install KEDA + scale-to-zero for `checkout-api-v1` based on Prometheus (requires reachable Prometheus endpoint)

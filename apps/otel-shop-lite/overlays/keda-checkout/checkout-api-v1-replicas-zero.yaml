@@ -1,0 +1,8 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout-api-v1
+  namespace: demo-app
+spec:
+  replicas: 0
+

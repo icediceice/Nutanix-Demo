@@ -21,3 +21,12 @@ spec:
       - PruneLast=true
       # Allows first-sync on clusters where CRDs are installed asynchronously (e.g., Gatekeeper templates creating constraint CRDs).
       - SkipDryRunOnMissingResource=true
+  # Allow cluster-specific Prometheus endpoints for the KEDA demo without forcing repo edits.
+  # The ConfigMap still exists in Git for a sensible default, but the serverAddress field can be patched per environment.
+  ignoreDifferences:
+    - group: ""
+      kind: ConfigMap
+      name: keda-prometheus
+      namespace: demo-app
+      jsonPointers:
+        - /data/serverAddress
