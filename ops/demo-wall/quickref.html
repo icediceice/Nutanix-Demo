@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NKP Demo — Operator Quick Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --nx-blue:  #0091DA;
+      --nx-green: #AFD135;
+      --nx-navy:  #003B5C;
+      --bg-a:     #001020;
+      --card:     rgba(16,27,43,.96);
+      --line:     #004068;
+      --ink:      #D8E8F8;
+      --muted:    #6090B8;
+      --good:     #AFD135;
+      --bad:      #FF5252;
+      --warn:     #F5A623;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Work Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(ellipse at 20% 0%, #002840 0%, var(--bg-a) 55%);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+
+    /* ── Header ── */
+    .top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 28px; gap: 12px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 8px;
+      display: grid; place-items: center;
+      background: var(--nx-green); color: var(--nx-navy);
+      font-family: "Sora", sans-serif; font-size: .82rem; font-weight: 700;
+    }
+    h1.title {
+      margin: 0; font-family: "Sora", sans-serif;
+      font-size: clamp(1rem, 2.2vw, 1.5rem); font-weight: 700;
+    }
+    .subtitle { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+    .back-link {
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--nx-blue);
+      border: 1px solid rgba(0,145,218,.35);
+      border-radius: 6px; padding: 5px 12px; text-decoration: none;
+    }
+    .back-link:hover { background: rgba(0,145,218,.1); }
+
+    /* ── Section labels ── */
+    .section-label {
+      margin: 0 0 10px; font-size: .68rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 5px;
+    }
+    .section { margin-bottom: 28px; }
+
+    /* ── Credential table ── */
+    .cred-table { width: 100%; border-collapse: collapse; }
+    .cred-table th {
+      text-align: left; font-size: .65rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+      padding: 6px 10px; border-bottom: 1px solid var(--line);
+    }
+    .cred-table td {
+      padding: 10px; border-bottom: 1px solid rgba(0,64,104,.5);
+      vertical-align: middle; font-size: .84rem;
+    }
+    .cred-table tr:last-child td { border-bottom: none; }
+    .cred-table tr:hover td { background: rgba(0,145,218,.05); }
+    .tool-name {
+      font-family: "Sora", sans-serif; font-weight: 700; font-size: .88rem;
+      color: var(--ink);
+    }
+    .tool-hint { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+    .url-link {
+      color: var(--nx-blue); text-decoration: none; font-size: .78rem;
+      border-bottom: 1px dotted rgba(0,145,218,.4); word-break: break-all;
+    }
+    .url-link:hover { border-bottom-style: solid; }
+    .status-pill {
+      display: inline-block; border-radius: 999px;
+      padding: 2px 8px; font-size: .64rem; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .pill-ready   { background: rgba(175,209,53,.15);  color: var(--good);  border: 1px solid rgba(175,209,53,.35); }
+    .pill-pending { background: rgba(245,166,35,.10);  color: var(--warn);  border: 1px solid rgba(245,166,35,.35); }
+    .pill-local   { background: rgba(0,145,218,.10);   color: var(--nx-blue); border: 1px solid rgba(0,145,218,.3); }
+    .cred-field {
+      display: flex; align-items: center; gap: 6px; min-width: 140px;
+    }
+    .cred-val {
+      font-family: monospace; font-size: .82rem;
+      background: #0a1522; border: 1px solid #23374f;
+      border-radius: 5px; padding: 3px 8px;
+      color: #bfd2ec; flex: 1; word-break: break-all;
+    }
+    .copy-btn {
+      background: none; border: 1px solid var(--line); border-radius: 5px;
+      color: var(--muted); cursor: pointer; font-size: .7rem; padding: 3px 7px;
+      white-space: nowrap; transition: background .15s, color .15s;
+    }
+    .copy-btn:hover  { background: rgba(0,145,218,.15); color: var(--nx-blue); border-color: rgba(0,145,218,.5); }
+    .copy-btn.copied { background: rgba(175,209,53,.15); color: var(--good);  border-color: rgba(175,209,53,.4); }
+    .dash { color: var(--muted); }
+
+    /* ── Port-forward commands ── */
+    .cmd-list { display: flex; flex-direction: column; gap: 8px; }
+    .cmd-row { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; align-items: center; }
+    .cmd-label { font-size: .72rem; font-weight: 600; color: var(--muted); }
+    .cmd-box {
+      font-family: monospace; font-size: .75rem; color: #bfd2ec;
+      background: #0a1522; border: 1px solid #23374f;
+      border-radius: 7px; padding: 7px 10px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* ── Scenario table ── */
+    .scen-table { width: 100%; border-collapse: collapse; }
+    .scen-table th {
+      text-align: left; font-size: .65rem; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+      padding: 6px 10px; border-bottom: 1px solid var(--line);
+    }
+    .scen-table td {
+      padding: 9px 10px; border-bottom: 1px solid rgba(0,64,104,.5);
+      font-size: .82rem; vertical-align: middle;
+    }
+    .scen-table tr:last-child td { border-bottom: none; }
+    .scen-table tr:hover td { background: rgba(0,145,218,.05); }
+    .branch-name {
+      font-family: monospace; font-size: .78rem;
+      color: var(--nx-blue);
+    }
+    .branch-next { font-size: .72rem; color: var(--muted); }
+
+    /* ── Switch command ── */
+    .switch-block {
+      background: #0a1522; border: 1px solid #23374f;
+      border-radius: 9px; padding: 14px 16px;
+    }
+    .switch-block .cmd-box { background: transparent; border: none; padding: 0; margin-top: 8px; }
+
+    /* ── Env var setup ── */
+    .env-block {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 10px; padding: 16px;
+    }
+    .env-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .env-table th {
+      text-align: left; font-size: .65rem; font-weight: 700;
+      letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
+      padding: 4px 8px; border-bottom: 1px solid var(--line);
+    }
+    .env-table td {
+      padding: 8px; font-size: .8rem;
+      border-bottom: 1px solid rgba(0,64,104,.4);
+      vertical-align: top;
+    }
+    .env-table tr:last-child td { border-bottom: none; }
+    .env-key {
+      font-family: monospace; font-size: .78rem;
+      color: var(--nx-green);
+    }
+    .env-how { font-size: .72rem; color: var(--muted); line-height: 1.4; }
+    code {
+      font-family: monospace; font-size: .76rem;
+      background: #0a1522; border-radius: 4px;
+      padding: 1px 5px; color: #bfd2ec;
+    }
+
+    /* ── Checklist ── */
+    .checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .checklist li { display: flex; gap: 10px; align-items: flex-start; font-size: .85rem; }
+    .checklist li::before { content: "☐"; color: var(--muted); flex-shrink: 0; }
+    .checklist li strong { color: var(--ink); }
+
+    /* ── Card wrapper for table-like sections ── */
+    .card-wrap {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; overflow: hidden;
+    }
+
+    /* ── Error ── */
+    .error { color: var(--bad); font-size: .85rem; margin-top: 12px; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--muted); font-size: .72rem; flex-wrap: wrap; gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="top">
+      <div class="brand">
+        <span class="brand-mark">NX</span>
+        <div>
+          <h1 class="title">Operator Quick Reference</h1>
+          <div class="subtitle">NKP Rx GitOps Demo &nbsp;·&nbsp; <span id="updatedAt">loading…</span></div>
+        </div>
+      </div>
+      <a href="/" class="back-link">← Demo Wall</a>
+    </div>
+
+    <!-- Pre-Demo Checklist -->
+    <p class="section-label">Pre-Demo Checklist</p>
+    <section class="section card-wrap" style="padding:16px;">
+      <ul class="checklist">
+        <li><div><strong>ArgoCD synced</strong> — Application <code>rx-demo</code> shows Synced + Healthy</div></li>
+        <li><div><strong>Credentials loaded</strong> — Env vars set on <code>demo-wall</code> Deployment (see Environment Setup below)</div></li>
+        <li><div><strong>Load active</strong> — Start on <code>scenario/baseline</code>; loadgen pod running</div></li>
+        <li><div><strong>Jaeger URL</strong> — Set <code>JAEGER_QUERY_URL</code> on storefront if you want trace deep-links to work</div></li>
+        <li><div><strong>Audience access</strong> — Share storefront URL; keep platform UIs on presenter screen only</div></li>
+        <li><div><strong>End on load-off</strong> — Switch to <code>scenario/load-off</code> after the demo to stop load</div></li>
+      </ul>
+    </section>
+
+    <!-- Platform Access with credentials -->
+    <p class="section-label">Platform Access &amp; Credentials</p>
+    <section class="section card-wrap">
+      <table class="cred-table">
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Status / URL</th>
+            <th>Username</th>
+            <th>Password</th>
+          </tr>
+        </thead>
+        <tbody id="credBody">
+          <tr><td colspan="4" style="color:var(--muted);padding:18px;text-align:center;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Port-forward commands (rendered if any link has a command) -->
+    <div id="portFwdSection" style="display:none">
+      <p class="section-label">Port-Forward Commands</p>
+      <section class="section card-wrap" style="padding:16px;">
+        <div class="cmd-list" id="portFwdList"></div>
+      </section>
+    </div>
+
+    <!-- Switch-scenario command -->
+    <p class="section-label">Switch Scenario</p>
+    <section class="section switch-block">
+      <div style="font-size:.8rem;color:var(--muted);">Patch the ArgoCD Application to change <code>targetRevision</code>, then force a hard refresh:</div>
+      <div class="cmd-box" id="switchCmd">kubectl -n argocd patch application rx-demo --type merge \
+  -p '{"spec":{"source":{"targetRevision":"scenario/BRANCH"}}}'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite</div>
+      <div style="margin-top:8px;">
+        <button class="copy-btn" onclick="copyText(document.getElementById('switchCmd').textContent, this)">Copy</button>
+      </div>
+    </section>
+
+    <!-- Scenario reference table -->
+    <p class="section-label">Scenario Reference</p>
+    <section class="section card-wrap">
+      <table class="scen-table">
+        <thead>
+          <tr>
+            <th>Branch</th>
+            <th>What it demonstrates</th>
+            <th>Next →</th>
+          </tr>
+        </thead>
+        <tbody id="scenBody">
+          <tr><td colspan="3" style="color:var(--muted);padding:18px;text-align:center;">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Environment setup -->
+    <p class="section-label">Environment Setup</p>
+    <section class="section env-block">
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">
+        Set these environment variables on the <code>demo-wall</code> Deployment so credentials appear on this page and the Demo Wall.
+        The secrets are read at startup; restart the pod after patching.
+      </div>
+      <table class="env-table">
+        <thead>
+          <tr><th>Variable</th><th>Required for</th><th>How to get it</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="env-key">KOMMANDER_SSO_USERNAME</span></td>
+            <td>Kiali, Jaeger, Grafana, Kommander</td>
+            <td><span class="env-how">Typically <code>admin</code>. Confirm with your Kommander SSO config.</span></td>
+          </tr>
+          <tr>
+            <td><span class="env-key">KOMMANDER_SSO_PASSWORD</span></td>
+            <td>Kiali, Jaeger, Grafana, Kommander</td>
+            <td>
+              <span class="env-how">
+                <code>kubectl -n kommander-default-workspace get secret dex-k8s-authenticator-secret -o jsonpath='{.data.client_secret}' | base64 -d</code>
+                <br>or check your cluster's SSO secret.
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="env-key">ARGOCD_USERNAME</span></td>
+            <td>ArgoCD</td>
+            <td><span class="env-how">Defaults to <code>admin</code> if unset.</span></td>
+          </tr>
+          <tr>
+            <td><span class="env-key">ARGOCD_PASSWORD</span></td>
+            <td>ArgoCD</td>
+            <td>
+              <span class="env-how">
+                <code>kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d</code>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="env-key">KOMMANDER_PLATFORM_BASE</span></td>
+            <td>Kommander URL auto-discovery</td>
+            <td>
+              <span class="env-how">
+                Optional. If the Kommander URL shows wrong, override with
+                <code>https://&lt;cluster-hostname&gt;</code>
+                (the sslip.nutanixdemo.com hostname).
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="env-key">JAEGER_QUERY_URL</span></td>
+            <td>Storefront trace deep-links</td>
+            <td>
+              <span class="env-how">
+                Set on the <strong>storefront Deployment</strong> (not demo-wall).
+                Use the Jaeger UI URL from Platform Access above.
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:14px;font-size:.78rem;color:var(--muted);">
+        Patch the Deployment:
+        <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;">kubectl -n demo-ops set env deployment/demo-wall \
+  KOMMANDER_SSO_USERNAME=admin \
+  KOMMANDER_SSO_PASSWORD='&lt;password&gt;' \
+  ARGOCD_PASSWORD='&lt;password&gt;'
+kubectl -n demo-ops rollout restart deployment/demo-wall</pre>
+      </div>
+    </section>
+
+    <div id="error" class="error"></div>
+
+    <footer>
+      <span>NKP Rx GitOps Demo — Operator Reference</span>
+      <span>Nutanix</span>
+    </footer>
+  </div>
+
+  <script>
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text.trim()).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove("copied"); }, 1800);
+      }).catch(() => {
+        // Fallback for non-HTTPS
+        const ta = document.createElement("textarea");
+        ta.value = text.trim();
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        btn.textContent = "Copied!"; btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 1800);
+      });
+    }
+
+    function safe(v) { return (v == null || v === "") ? null : String(v); }
+
+    function pillClass(status) {
+      if (status === "ready") return "pill-ready";
+      if (status === "local") return "pill-local";
+      return "pill-pending";
+    }
+
+    function renderCreds(links) {
+      const tbody = document.getElementById("credBody");
+      const pfList = document.getElementById("portFwdList");
+      const pfSection = document.getElementById("portFwdSection");
+      tbody.innerHTML = "";
+      pfList.innerHTML = "";
+      let hasPf = false;
+
+      (links || []).forEach(link => {
+        const tr = document.createElement("tr");
+
+        // Tool name + hint
+        const tdName = document.createElement("td");
+        tdName.innerHTML = `<div class="tool-name">${link.name || ""}</div>` +
+          (link.hint ? `<div class="tool-hint">${link.hint}</div>` : "");
+        tr.appendChild(tdName);
+
+        // Status + URL
+        const tdUrl = document.createElement("td");
+        const pillHtml = `<span class="status-pill ${pillClass(link.status)}">${link.status || "?"}</span>`;
+        const urlHtml = link.url
+          ? `<a class="url-link" href="${link.url}" target="_blank" rel="noreferrer">${link.url}</a>`
+          : `<span class="dash">—</span>`;
+        tdUrl.innerHTML = `<div style="display:flex;flex-direction:column;gap:5px;">${pillHtml}${urlHtml}</div>`;
+        tr.appendChild(tdUrl);
+
+        // Username
+        const tdUser = document.createElement("td");
+        const uname = safe(link.username);
+        if (uname) {
+          tdUser.innerHTML = `<div class="cred-field">
+            <span class="cred-val">${uname}</span>
+            <button class="copy-btn" onclick="copyText('${uname.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',this)">Copy</button>
+          </div>`;
+        } else {
+          tdUser.innerHTML = `<span class="dash">—</span>`;
+        }
+        tr.appendChild(tdUser);
+
+        // Password
+        const tdPass = document.createElement("td");
+        const pwd = safe(link.password);
+        if (pwd) {
+          tdPass.innerHTML = `<div class="cred-field">
+            <span class="cred-val">${pwd}</span>
+            <button class="copy-btn" onclick="copyText(this.closest('.cred-field').querySelector('.cred-val').textContent,this)">Copy</button>
+          </div>`;
+        } else {
+          tdPass.innerHTML = `<span class="dash">—</span>`;
+        }
+        tr.appendChild(tdPass);
+
+        tbody.appendChild(tr);
+
+        // Port-forward
+        if (link.command) {
+          hasPf = true;
+          const row = document.createElement("div");
+          row.className = "cmd-row";
+          row.innerHTML = `
+            <span class="cmd-label">${link.name || ""}</span>
+            <pre class="cmd-box">${link.command}</pre>
+            <button class="copy-btn" onclick="copyText(this.previousElementSibling.textContent,this)">Copy</button>
+          `;
+          pfList.appendChild(row);
+        }
+      });
+
+      pfSection.style.display = hasPf ? "" : "none";
+    }
+
+    function renderScenarios(scenarios) {
+      const tbody = document.getElementById("scenBody");
+      tbody.innerHTML = "";
+      (scenarios || []).forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><span class="branch-name">${s.branch || ""}</span></td>
+          <td>${s.intent || ""}</td>
+          <td><span class="branch-next">${s.next ? "→ " + s.next : ""}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function load() {
+      try {
+        const res = await fetch("/api/status", { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        document.getElementById("updatedAt").textContent =
+          "Updated " + new Date(data.now).toLocaleTimeString();
+        renderCreds(data.links || []);
+        renderScenarios(data.scenarios || []);
+      } catch (err) {
+        document.getElementById("error").textContent =
+          "Could not load status: " + err + " — credentials will show once the Demo Wall backend is reachable.";
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
