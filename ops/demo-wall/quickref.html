@@ -349,11 +349,13 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
         </tbody>
       </table>
       <div style="margin-top:14px;font-size:.78rem;color:var(--muted);">
-        Patch the Deployment:
-        <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;">kubectl -n demo-ops set env deployment/demo-wall \
-  KOMMANDER_SSO_USERNAME=admin \
-  KOMMANDER_SSO_PASSWORD='&lt;password&gt;' \
-  ARGOCD_PASSWORD='&lt;password&gt;'
+        Create (or update) the <code>demo-wall-access</code> Secret — credentials are read from here at pod startup:
+        <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;">kubectl -n demo-ops create secret generic demo-wall-access \
+  --from-literal=kommander_username=admin \
+  --from-literal=kommander_password='&lt;password&gt;' \
+  --from-literal=argocd_username=admin \
+  --from-literal=argocd_password='&lt;password&gt;' \
+  --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n demo-ops rollout restart deployment/demo-wall</pre>
       </div>
     </section>
