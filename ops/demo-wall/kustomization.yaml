@@ -6,6 +6,7 @@ configMapGenerator:
     files:
       - index.html
       - server.py
+      - quickref.html
 resources:
   - rbac.yaml
   - deployment.yaml
