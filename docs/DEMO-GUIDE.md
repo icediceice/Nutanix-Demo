@@ -271,7 +271,67 @@ This stops the load generator. The cluster is idle and safe to leave.
 
 ---
 
-### Beat 14 — (Optional) Autoscaling with KEDA
+### Beat 14 — (Optional) Quota pressure
+
+**Action**: Switch to `scenario/quota-pressure` in ArgoCD.
+
+What happens:
+- A `quota-stress` Deployment (20 × `pause` containers) is added to `demo-app`
+- Pod count rises to ~75–80% of the 40-pod namespace quota
+- Demo Wall **Namespace Quota** card goes amber
+
+Show **Kommander → Clusters → [workload cluster] → Namespaces → demo-app** — the bar goes amber in real time.
+
+Then try to exceed the quota:
+```bash
+# Attempt to scale quota-stress beyond the limit
+kubectl -n demo-app scale deploy quota-stress --replicas=30
+# Pod count will exceed quota — new pods stay Pending
+kubectl -n demo-app get pods | grep -c Running
+kubectl -n demo-app get events --sort-by=.lastTimestamp | tail -5
+# Look for: "exceeded quota: demo-app-quota"
+```
+
+**What you say**: _"The platform hard-stopped that scale request. No alert, no ticket, no manual intervention —
+the quota enforced the contract automatically. Developers get self-service, ops teams get guardrails."_
+
+Return to baseline when done.
+
+---
+
+### Beat 15 — (Optional) Policy enforcement: Gatekeeper deny mode
+
+**Action**: Switch to `scenario/policy-enforce` in ArgoCD.
+
+What changes:
+- `K8sDemoRequiredLabels` constraint flips from `dryrun` → `deny`
+- Demo Wall policy card stays green (existing workloads are compliant)
+- ArgoCD shows the constraint as `Synced / Healthy`
+
+Now apply the violation example:
+```bash
+kubectl apply -f platform/policy/examples/policy-violation-example.yaml
+```
+
+The pod is **rejected at admission** — unlike Beat 9 (dryrun), this one never starts:
+```
+Error from server ([demo-required-labels] label 'app' is required): ...
+```
+
+Show the error message to the audience. Then clean up and confirm nothing changed:
+```bash
+kubectl -n demo-app get pods | grep policy-violation  # nothing
+```
+
+**What you say**: _"That pod never existed. Gatekeeper intercepted the API call before Kubernetes even
+scheduled it. One line in Git — `enforcementAction: deny` — is the difference between audit and enforcement.
+The policy is the same; the action changed."_
+
+Return to baseline when done.
+
+---
+
+### Beat 16 — (Optional) Autoscaling with KEDA
 
 > Requires KEDA pre-installed (`platform/keda/` applied, or bootstrap with `--branch scenario/keda-checkout`).
 
@@ -322,6 +382,8 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 | `scenario/incident-error` | v2 returns 10% errors, 90/10 | Incident drill — v2 returning errors | `baseline` |
 | `scenario/mirror-v2` | Mirror all traffic to v2 silently | Traffic mirroring | `baseline` |
 | `scenario/keda-checkout` | KEDA scales checkout-api to zero | Autoscaling — scale to zero | `baseline` |
+| `scenario/quota-pressure` | 20 pause-pods fill ~75% pod quota | Quota pressure — guardrails active | `baseline` |
+| `scenario/policy-enforce` | Gatekeeper deny on required-labels | Policy enforcement — deny mode | `baseline` |
 
 ---
 
