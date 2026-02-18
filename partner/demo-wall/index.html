@@ -4,94 +4,186 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NKP Demo Wall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-a: #08101a;
-      --bg-b: #11243a;
-      --card: #101b2b;
-      --line: #2d4564;
-      --ink: #e8f0ff;
-      --muted: #9db3cf;
-      --good: #2ed5a7;
-      --bad: #ff6b6b;
-      --warn: #ffca57;
-      --accent: #58a6ff;
+      /* Nutanix brand */
+      --nx-blue:    #0091DA;
+      --nx-green:   #AFD135;
+      --nx-navy:    #003B5C;
+      /* Wall tokens */
+      --bg-a:  #001020;
+      --bg-b:  #001828;
+      --card:  #002238;
+      --line:  #004068;
+      --ink:   #D8E8F8;
+      --muted: #6090B8;
+      --good:  #AFD135;
+      --bad:   #FF5252;
+      --warn:  #F5A623;
+      --accent: #0091DA;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", Tahoma, sans-serif;
+      font-family: "Work Sans", "Segoe UI", sans-serif;
       color: var(--ink);
-      background: radial-gradient(circle at top left, var(--bg-b), var(--bg-a) 60%);
+      background: radial-gradient(ellipse at 20% 0%, #002840 0%, var(--bg-a) 55%);
       min-height: 100vh;
     }
-    .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ── Header ── */
     .top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 24px;
       gap: 12px;
       flex-wrap: wrap;
     }
-    .title { margin: 0; font-size: clamp(1.3rem, 2.5vw, 2rem); }
-    .stamp { color: var(--muted); font-size: .95rem; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: var(--nx-green);
+      color: var(--nx-navy);
+      font-family: "Sora", sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .title {
+      margin: 0;
+      font-family: "Sora", "Work Sans", sans-serif;
+      font-size: clamp(1.2rem, 2.5vw, 1.75rem);
+      font-weight: 700;
+    }
+    .stamp { color: var(--muted); font-size: .86rem; }
+
+    /* ── Section labels ── */
+    .section-label {
+      margin: 0 0 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── Cards ── */
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 20px;
     }
     .card {
       background: rgba(16, 27, 43, .92);
       border: 1px solid var(--line);
       border-radius: 12px;
-      padding: 12px;
+      padding: 14px;
     }
-    .label { color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; }
-    .value { margin-top: 6px; font-size: 1.1rem; font-weight: 700; word-break: break-word; }
+    .label {
+      color: var(--muted);
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .value {
+      margin-top: 6px;
+      font-family: "Sora", "Work Sans", sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
     .good { color: var(--good); }
-    .bad { color: var(--bad); }
+    .bad  { color: var(--bad); }
     .warn { color: var(--warn); }
-    .grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 12px;
-    }
+
+    /* ── KPI grid ── */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 20px;
     }
-    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
-    table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-    th, td { border-bottom: 1px solid #223851; padding: 8px; text-align: left; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; }
-    a {
-      display: inline-block;
-      margin: 4px 8px 4px 0;
-      color: var(--accent);
+
+    /* ── Lower two-column layout ── */
+    .split {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td {
+      border-bottom: 1px solid #223851;
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── Quick links ── */
+    .link-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    a.pill-link {
+      color: var(--nx-blue);
       text-decoration: none;
-      border: 1px solid #345274;
+      border: 1px solid #004A6A;
       border-radius: 999px;
-      padding: 6px 10px;
-      font-size: .85rem;
+      padding: 6px 12px;
+      font-size: .82rem;
+      font-weight: 500;
+      transition: border-color .15s;
     }
+    a.pill-link:hover { border-color: var(--nx-blue); }
+
+    /* ── Error & footer ── */
     .error {
       margin-top: 8px;
       color: var(--bad);
       white-space: pre-wrap;
+      font-size: .88rem;
+    }
+    footer {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: .76rem;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
+
     <div class="top">
-      <h1 class="title">NKP Demo Wall</h1>
-      <div class="stamp">Auto-refresh: 5s | Last update: <span id="updatedAt">-</span></div>
+      <div class="brand">
+        <span class="brand-mark">NX</span>
+        <h1 class="title">NKP Demo Wall</h1>
+      </div>
+      <div class="stamp">Auto-refresh 5s &nbsp;&middot;&nbsp; Last update: <span id="updatedAt">-</span></div>
     </div>
 
+    <p class="section-label">Live Status</p>
     <section class="cards">
       <article class="card">
         <div class="label">Scenario Branch</div>
@@ -106,25 +198,27 @@
         <div id="gitReady" class="value">-</div>
       </article>
       <article class="card">
-        <div class="label">Loadgen (Desired/Ready)</div>
+        <div class="label">Loadgen (Desired / Ready)</div>
         <div id="loadgen" class="value">-</div>
       </article>
       <article class="card">
-        <div class="label">Canary Weights (v1/v2)</div>
+        <div class="label">Canary Weights (v1 / v2)</div>
         <div id="canaryWeights" class="value">-</div>
       </article>
       <article class="card">
-        <div class="label">Policy Summary (pass/warn/fail/error)</div>
+        <div class="label">Policy (pass / warn / fail / error)</div>
         <div id="policySummary" class="value">-</div>
       </article>
     </section>
 
+    <p class="section-label">KPIs</p>
     <section class="kpi-grid" id="kpiCards"></section>
 
-    <section class="grid">
+    <p class="section-label">Details</p>
+    <section class="split">
       <article class="card">
         <div class="label">Flux Kustomizations</div>
-        <table>
+        <table style="margin-top:10px">
           <thead>
             <tr>
               <th>Name</th>
@@ -139,17 +233,22 @@
 
       <article class="card">
         <div class="label">Quick Links</div>
-        <div style="margin-top:8px">
-          <a href="http://localhost:20001" target="_blank" rel="noreferrer">Kiali</a>
-          <a href="http://localhost:16686" target="_blank" rel="noreferrer">Jaeger</a>
-          <a href="http://localhost:3000" target="_blank" rel="noreferrer">Grafana</a>
+        <div class="link-pills">
+          <a class="pill-link" href="http://localhost:20001" target="_blank" rel="noreferrer">Kiali</a>
+          <a class="pill-link" href="http://localhost:16686" target="_blank" rel="noreferrer">Jaeger</a>
+          <a class="pill-link" href="http://localhost:3000" target="_blank" rel="noreferrer">Grafana</a>
         </div>
-        <p style="color:var(--muted); margin-top: 10px;">
-          Use local port-forwards for links above.
+        <p style="color:var(--muted); font-size:.82rem; margin:12px 0 0;">
+          Use local port-forwards for the links above.
         </p>
         <div id="error" class="error"></div>
       </article>
     </section>
+
+    <footer>
+      <span>NKP Rx GitOps Demo</span>
+      <span>Nutanix</span>
+    </footer>
   </div>
 
   <script>
@@ -174,11 +273,16 @@
       setText("branch", data.gitRepository.branch, "");
       setText("revision", data.gitRepository.revision, "");
       setText("gitReady", data.gitRepository.ready, readyClass(data.gitRepository.ready));
-      setText("loadgen", `${data.loadgen.desiredReplicas}/${data.loadgen.readyReplicas} (${safe(data.loadgen.profile)})`, "");
+      setText("loadgen", `${data.loadgen.desiredReplicas} / ${data.loadgen.readyReplicas} (${safe(data.loadgen.profile)})`, "");
+
       const canary = data.canary || {};
       const policy = data.policy || {};
-      setText("canaryWeights", `${safe(canary.v1)}/${safe(canary.v2)}`, "");
-      setText("policySummary", `${safe(policy.pass)}/${safe(policy.warn)}/${safe(policy.fail)}/${safe(policy.error)}`, readyClass(policy.status === "good" ? "True" : (policy.status === "bad" ? "False" : "Unknown")));
+      setText("canaryWeights", `${safe(canary.v1)} / ${safe(canary.v2)}`, "");
+      setText(
+        "policySummary",
+        `${safe(policy.pass)} / ${safe(policy.warn)} / ${safe(policy.fail)} / ${safe(policy.error)}`,
+        readyClass(policy.status === "good" ? "True" : (policy.status === "bad" ? "False" : "Unknown"))
+      );
 
       const kpiCards = document.getElementById("kpiCards");
       kpiCards.innerHTML = "";
@@ -189,7 +293,7 @@
         card.innerHTML = `
           <div class="label">${safe(k.name)}</div>
           <div class="value ${statusClass}">${safe(k.value)}</div>
-          <div class="label">Target: ${safe(k.threshold)}</div>
+          <div class="label" style="margin-top:4px">Target: ${safe(k.threshold)}</div>
         `;
         kpiCards.appendChild(card);
       });
@@ -206,6 +310,7 @@
         `;
         rows.appendChild(tr);
       });
+
       document.getElementById("error").textContent = "";
     }
 
@@ -213,8 +318,7 @@
       try {
         const res = await fetch("/api/status", { cache: "no-store" });
         if (!res.ok) throw new Error(`status ${res.status}`);
-        const payload = await res.json();
-        render(payload);
+        render(await res.json());
       } catch (err) {
         document.getElementById("error").textContent = "Status fetch failed: " + err;
       }

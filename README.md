@@ -9,12 +9,12 @@ Simplified, branch-driven demo for NKP Rx environments.
 3. End on `scenario/load-off`.
 
 ## Start here
-- `partner/RUNBOOK.md`
-- `partner/QUICKSTART.md`
-- `partner/SCENARIOS.md`
+- `partner/DEMO-GUIDE.md` ← **start here** — complete operator guide (setup → demo flow → commands)
+- `partner/NKP-CONSOLE-GUIDE.md` ← which features to show in the NKP console vs Demo Wall
 - `partner/PREREQS.md`
 - `partner/TROUBLESHOOTING.md`
 - `partner/RESET.md`
+- `PROGRESS.md` ← improvement backlog and session log
 
 KEDA (optional autoscaling demo):
 - `docs/keda.md`
