@@ -9,10 +9,10 @@ This is a **branch-driven GitOps demo** for NKP Rx. The control plane is ArgoCD 
 | Question | Go here |
 |---|---|
 | What is this repo? | `docs/architect.md` §1–2 |
-| **How do I run the demo?** | **`partner/DEMO-GUIDE.md`** ← single source of truth for operators |
-| Which features to show in NKP console? | `partner/NKP-CONSOLE-GUIDE.md` |
-| Scenario branches and intent | `partner/DEMO-GUIDE.md` §4 |
-| Troubleshooting / reset | `partner/TROUBLESHOOTING.md`, `partner/RESET.md` |
+| **How do I run the demo?** | **`docs/DEMO-GUIDE.md`** ← single source of truth for operators |
+| Which features to show in NKP console? | `docs/NKP-CONSOLE-GUIDE.md` |
+| Scenario branches and intent | `docs/DEMO-GUIDE.md §4` |
+| Troubleshooting / reset | `docs/TROUBLESHOOTING.md`, `docs/RESET.md` |
 | Full technical spec | `docs/demo-spec.md` |
 | Architecture deep-dive | `docs/architect.md` |
 | **Current improvement backlog** | **`PROGRESS.md`** (repo root) |
@@ -26,7 +26,7 @@ This is a **branch-driven GitOps demo** for NKP Rx. The control plane is ArgoCD 
 - What is pending (from the backlog)
 - Any decisions made or constraints discovered
 
-Link new improvement ideas into `partner/PROGRESS.md` immediately when they arise — don't leave them only in the conversation.
+Link new improvement ideas into `PROGRESS.md` immediately when they arise — don't leave them only in the conversation.
 
 ---
 
@@ -39,10 +39,11 @@ apps/otel-shop-lite/        App manifests, v1/v2 deployments, fault overlays
 mesh/istio/                 Istio Gateway / VirtualService / DestinationRule overlays
 ops/loadgen/                k6 load generator overlays (baseline / peak / off)
 ops/demo-wall/              In-cluster KPI wall (auto-refresh every 5 s)
-partner/                    Operator-facing docs (runbooks, scenarios, commands)
-docs/                       Technical spec, architecture, verification checklist
+ops/demo-wall-local/        Standalone local KPI wall (operator laptop / PS1 launcher)
+docs/                       All documentation — operator guides, architecture, spec
 prereqs/                    Required / optional / sensitive-template grouping
 scripts/                    bootstrap-demo.sh, print-access.sh, install-kubectl.sh
+obsolete/                   Superseded documents kept for historical reference
 auth/                       Kubeconfigs — intentionally git-ignored, never commit
 ```
 
@@ -86,7 +87,7 @@ Always end sessions on `scenario/load-off`.
 - **No live YAML edits** in the cluster during a demo. Change the branch; let ArgoCD reconcile.
 - **One GitOps controller per namespace.** ArgoCD owns `demo-app` and `demo-ops`; do not let other controllers (Flux, Helm operator) touch those namespaces.
 - **Never commit secrets or kubeconfigs.** `auth/` is git-ignored. If you see credentials in a diff, stop and flag it immediately.
-- **Keep core components consistent** across `main` and all `scenario/*` branches. Core components: `ops/demo-wall/`, `partner/`, `scripts/`, `platform/`. Diverge only when a scenario explicitly requires it, and document the reason in `partner/SCENARIOS.md` or `docs/demo-spec.md`.
+- **Keep core components consistent** across `main` and all `scenario/*` branches. Core components: `ops/demo-wall/`, `ops/demo-wall-local/`, `docs/`, `scripts/`, `platform/`. Diverge only when a scenario explicitly requires it, and document the reason in `docs/demo-spec.md`.
 
 ---
 
@@ -99,7 +100,7 @@ Always end sessions on `scenario/load-off`.
    - `mesh/istio/kustomization.yaml`
    - `ops/loadgen/kustomization.yaml`
 3. Validate: `kubectl kustomize clusters/rx-demo/argocd/root`
-4. Add an entry to `partner/SCENARIOS.md`.
+4. Add an entry to the scenario table in `docs/DEMO-GUIDE.md §4` and update `SCENARIO_META` in `ops/demo-wall/server.py`.
 
 ### Change canary weights
 Edit or add an overlay under `mesh/istio/overlays/`, then point `mesh/istio/kustomization.yaml` at it.
@@ -134,6 +135,8 @@ Edit `platform/policy/demo-guardrails.yaml`. Keep `enforcementAction: dryrun` un
 | App source (Python) | `apps/otel-shop-lite/src/` |
 | Bootstrap script | `scripts/bootstrap-demo.sh` |
 | Access URL printer | `scripts/print-access.sh` |
+| Operator guide | `docs/DEMO-GUIDE.md` |
+| NKP console beats | `docs/NKP-CONSOLE-GUIDE.md` |
 
 ---
 

@@ -9,11 +9,11 @@ Simplified, branch-driven demo for NKP Rx environments.
 3. End on `scenario/load-off`.
 
 ## Start here
-- `partner/DEMO-GUIDE.md` ← **start here** — complete operator guide (setup → demo flow → commands)
-- `partner/NKP-CONSOLE-GUIDE.md` ← which features to show in the NKP console vs Demo Wall
-- `partner/PREREQS.md`
-- `partner/TROUBLESHOOTING.md`
-- `partner/RESET.md`
+- `docs/DEMO-GUIDE.md` ← **start here** — complete operator guide (setup → demo flow → commands)
+- `docs/NKP-CONSOLE-GUIDE.md` ← which features to show in the NKP console vs Demo Wall
+- `docs/PREREQS.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/RESET.md`
 - `PROGRESS.md` ← improvement backlog and session log
 
 KEDA (optional autoscaling demo):
@@ -24,9 +24,10 @@ KEDA (optional autoscaling demo):
 - `platform`: namespaces, RBAC, quotas, Istio injection labels, Kommander add-ons
 - `apps`: otel-shop-lite app manifests and fault overlays
 - `mesh`: Istio DestinationRule/VirtualService overlays
-- `ops`: k6 load generator overlays + in-cluster Demo Wall
+- `ops`: k6 load generator overlays, in-cluster Demo Wall, and standalone local Demo Wall
+- `docs`: all documentation — operator guides, architecture, spec, checklists
 - `prereqs`: required/optional/sensitive template grouping
-- `partner`: operator-facing docs
+- `obsolete`: superseded documents kept for historical reference
 
 ## Defaults on `main`
 - App overlay: normal

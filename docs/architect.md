@@ -20,7 +20,7 @@ To avoid token waste:
 Nutanix NKP Rx GitOps demo repository. It is designed to be operated by switching branches (for example, `scenario/baseline` to `scenario/incident-error`) rather than editing live manifests in-cluster.
 
 Primary operator entrypoint:
-- Complete operator guide (setup, demo flow, commands): `partner/DEMO-GUIDE.md`
+- Complete operator guide (setup, demo flow, commands): `docs/DEMO-GUIDE.md`
 
 ## 2. Control Plane Model (Branch-Driven GitOps)
 The demo is controlled by ArgoCD:
@@ -55,7 +55,7 @@ Examples of what scenarios do:
 - Load: switch loadgen overlays (baseline/peak/off).
 - Optional: KEDA scenario installs KEDA resources and uses a Prometheus endpoint ConfigMap (see `platform/keda` and `docs/keda.md`).
 
-Canonical scenario list: `partner/DEMO-GUIDE.md §4`.
+Canonical scenario list: `docs/DEMO-GUIDE.md §4`.
 
 ## 5. Key Components (App, Mesh, Load, Policies, Demo Wall)
 Load only the subtopic you need:
@@ -71,7 +71,8 @@ Load only the subtopic you need:
 
 ### 5.3 Ops (Loadgen + Demo Wall)
 - Load generator: `ops/loadgen/` with overlays under `ops/loadgen/overlays/`
-- Demo Wall: `ops/demo-wall/` and partner notes under `partner/demo-wall/`
+- Demo Wall (in-cluster): `ops/demo-wall/`
+- Demo Wall (local standalone): `ops/demo-wall-local/`
 
 ### 5.4 Platform Guardrails
 - Namespaces/RBAC/quotas: `platform/`
@@ -88,7 +89,7 @@ Typical approach:
    - `apps/otel-shop-lite/kustomization.yaml`
    - `mesh/istio/kustomization.yaml`
    - `ops/loadgen/kustomization.yaml`
-4. Update the scenario table: `partner/DEMO-GUIDE.md §4`.
+4. Update the scenario table: `docs/DEMO-GUIDE.md §4`.
 
 ### 6.2 Change Canary Weights
 - Edit or add Istio overlay under `mesh/istio/overlays/`.
@@ -112,5 +113,5 @@ Typical approach:
 - Full specification (more detailed than this doc): `docs/demo-spec.md`
 - Pre-flight / day-before checklist: `docs/verification-checklist.md`
 - KEDA autoscaling notes: `docs/keda.md`
-- Complete operator guide (setup, demo flow, commands): `partner/DEMO-GUIDE.md`
+- Complete operator guide (setup, demo flow, commands): `docs/DEMO-GUIDE.md`
 

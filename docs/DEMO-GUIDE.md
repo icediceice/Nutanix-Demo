@@ -15,7 +15,7 @@ Open this file before the demo and keep it on your second screen.
 | Istio, Kiali, Jaeger, Grafana installed | `kubectl get ns` — look for `istio-system`, `kommander-default-workspace` |
 | Enough resources | `kubectl describe quota -n demo-app` — pods < 35 of 40 |
 
-Full prerequisites: `partner/PREREQS.md`
+Full prerequisites: `docs/PREREQS.md`
 
 ---
 
@@ -366,7 +366,7 @@ Replace `<NKP_BASE>` with the URL from Demo Wall → Platform Access → Kommand
 | Jaeger | `<NKP_BASE>/dkp/jaeger` |
 | Grafana | `<NKP_BASE>/dkp/logging/grafana` |
 
-Full platform beat guide: `partner/NKP-CONSOLE-GUIDE.md`
+Full platform beat guide: `docs/NKP-CONSOLE-GUIDE.md`
 
 ---
 
@@ -380,5 +380,5 @@ Full platform beat guide: `partner/NKP-CONSOLE-GUIDE.md`
 | Canary weights stuck | Force ArgoCD sync: add `argocd.argoproj.io/refresh=hard` annotation |
 | Policy card shows errors | Gatekeeper constraints not yet synced — wait 30 s and check `kubectl get constraints -A` |
 
-Full troubleshooting: `partner/TROUBLESHOOTING.md`
-Full reset procedure: `partner/RESET.md`
+Full troubleshooting: `docs/TROUBLESHOOTING.md`
+Full reset procedure: `docs/RESET.md`
