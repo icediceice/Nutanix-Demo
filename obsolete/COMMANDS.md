@@ -48,6 +48,25 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 kubectl -n argocd get application rx-demo -o wide
 ```
 
+## Resource Quotas (Beat 2 — Kommander → Namespaces)
+```bash
+kubectl describe resourcequota demo-app-quota -n demo-app
+kubectl describe resourcequota demo-ops-quota -n demo-ops
+kubectl describe limitrange default-limits -n demo-app
+```
+
+## RBAC (Beat 3 — Kommander → Access Control)
+```bash
+kubectl get roles -n demo-app -o wide
+kubectl get rolebindings -n demo-app -o wide
+```
+
+## Platform Add-ons (Beat 4 — Kommander → Applications)
+```bash
+kubectl get appdeployments -A 2>/dev/null || \
+  kubectl get helmreleases -n kommander-default-workspace -o wide
+```
+
 ## Governance (Gatekeeper) quick checks
 ```bash
 kubectl get constrainttemplates.templates.gatekeeper.sh
