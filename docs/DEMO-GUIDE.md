@@ -57,6 +57,20 @@ kubectl -n argocd get secret argocd-initial-admin-secret \
   -o jsonpath='{.data.password}' | base64 -d && echo
 ```
 
+Demo Wall credentials (used by the Demo Wall and Quick Reference page):
+```bash
+# Kommander SSO password — check your cluster's SSO secret or NKP UI
+kubectl -n demo-ops create secret generic demo-wall-access \
+  --from-literal=kommander_username=admin \
+  --from-literal=kommander_password='<kommander-sso-password>' \
+  --from-literal=argocd_username=admin \
+  --from-literal=argocd_password='<argocd-password>' \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n demo-ops rollout restart deployment/demo-wall
+```
+
+> The Secret is optional — the Demo Wall runs without it, but credentials will be blank on the Quick Reference page.
+
 Fallback port-forwards (no LoadBalancer):
 ```bash
 kubectl -n demo-ops port-forward svc/demo-wall 9090:80          # Demo Wall
