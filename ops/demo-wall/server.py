@@ -20,6 +20,8 @@ SCENARIO_META = {
     "scenario/incident-error":   {"intent": "Incident drill — v2 returning 10% errors, watch Kiali graph", "next": "baseline"},
     "scenario/mirror-v2":        {"intent": "Traffic mirroring — v2 receives shadow copies silently", "next": "baseline"},
     "scenario/keda-checkout":    {"intent": "Autoscaling — checkout-api scales to zero when idle", "next": "baseline"},
+    "scenario/quota-pressure":   {"intent": "Quota pressure — namespace at ~75% pod capacity, guardrails active", "next": "baseline"},
+    "scenario/policy-enforce":   {"intent": "Policy enforcement — Gatekeeper denying non-compliant pods at admission", "next": "baseline"},
 }
 
 
@@ -565,6 +567,51 @@ def build_quick_links():
     return links
 
 
+def get_quota_status():
+    """Return ResourceQuota usage for demo-app namespace."""
+    data = k8s_get_json("/api/v1/namespaces/demo-app/resourcequotas")
+    if "_error" in data:
+        return {"available": False}
+    items = data.get("items") or []
+    if not items:
+        return {"available": False}
+    quota = items[0]
+    hard = (quota.get("status") or {}).get("hard") or {}
+    used = (quota.get("status") or {}).get("used") or {}
+
+    def parse_quantity(val, scale=1):
+        try:
+            v = str(val or "0").strip()
+            if v.endswith("m"):
+                return float(v[:-1]) / 1000.0
+            if v.endswith("Ki"):
+                return float(v[:-2]) * 1024 / scale
+            if v.endswith("Mi"):
+                return float(v[:-2]) * 1024 * 1024 / scale
+            if v.endswith("Gi"):
+                return float(v[:-2]) * 1024 * 1024 * 1024 / scale
+            return float(v)
+        except Exception:
+            return 0.0
+
+    pods_used  = int(used.get("pods", 0) or 0)
+    pods_hard  = int(hard.get("pods", 0) or 0)
+    cpu_used   = parse_quantity(used.get("requests.cpu", "0"))
+    cpu_hard   = parse_quantity(hard.get("requests.cpu", "0"))
+    mem_used   = parse_quantity(used.get("requests.memory", "0"), scale=1024*1024)
+    mem_hard   = parse_quantity(hard.get("requests.memory", "0"), scale=1024*1024)
+
+    pods_pct = round((pods_used / pods_hard * 100), 1) if pods_hard > 0 else 0.0
+    pods_status = "good" if pods_pct < 70 else ("warn" if pods_pct < 90 else "bad")
+
+    return {
+        "available": True,
+        "pods": {"used": pods_used, "hard": pods_hard, "pct": pods_pct, "status": pods_status},
+        "cpu":  {"used": round(cpu_used, 2), "hard": round(cpu_hard, 2)},
+        "mem":  {"used": round(mem_used, 0), "hard": round(mem_hard, 0)},
+    }
+
+
 def get_keda_status():
     """Return KEDA ScaledObject state for checkout-api-v1; {enabled:False} when not present."""
     so = k8s_get_json("/apis/keda.sh/v1alpha1/namespaces/demo-app/scaledobjects/checkout-api-v1-keda")
@@ -642,6 +689,7 @@ def build_payload():
     cd_rate = 100.0 if cd_ok else (50.0 if health_status in ("Progressing", "Suspended") else 0.0)
     links = build_quick_links()
     keda = get_keda_status()
+    quota = get_quota_status()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -675,6 +723,7 @@ def build_payload():
             {"name": "Policy Compliance", "value": f"{compliance}%", "status": policy_status, "threshold": ">= 95%"},
         ],
         "keda": keda,
+        "quota": quota,
         "links": links,
     }
 
