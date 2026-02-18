@@ -76,9 +76,9 @@ Priority: **High** = do next session | **Med** = plan soon | **Low** = nice to h
 | 1 | Trace ID → Jaeger deep link in storefront | High | ✅ Done | `JAEGER_QUERY_URL` env var controls the link target |
 | 2 | `scripts/switch-scenario.sh` wrapper | Low | ⏭️ Skipped | ArgoCD UI is sufficient per user |
 | 3 | Scenario intent + next-up cue in Demo Wall | High | ✅ Done | `SCENARIO_META` dict in server.py |
-| 4 | Quota utilization card in Demo Wall | Med | ⏳ Planned | Query `ResourceQuota` used/hard in server.py; progress bar in UI |
-| 5 | `scenario/quota-pressure` branch | Med | ⏳ Planned | Deploy stress workload to fill ~80% pod quota; makes Kommander namespace view visually interesting |
-| 6 | `scenario/policy-enforce` branch | Med | ⏳ Planned | Flip one Gatekeeper constraint from `dryrun` → `deny`; show pod rejection live |
+| 4 | Quota utilization card in Demo Wall | Med | ✅ Done | `get_quota_status()` in server.py; progress bar green/warn/red; always visible when quota exists |
+| 5 | `scenario/quota-pressure` branch | Med | ✅ Done | 20× pause-container Deployment fills ~75% pod quota; Demo Wall bar goes amber |
+| 6 | `scenario/policy-enforce` branch | Med | ✅ Done | `platform/policy/overlays/enforce/` patches K8sDemoRequiredLabels to deny; pod rejected at admission |
 | 7 | Per-constraint breakdown in Demo Wall policy card | Med | ⏳ Planned | Show each constraint name + violation count instead of aggregate |
 | 8 | Consolidated operator docs | High | ✅ Done | `partner/DEMO-GUIDE.md` |
 | 9 | Favicon (Nutanix X mark, 32×32 SVG) | Low | ⏳ Planned | Inline SVG data URI in both demo-wall/index.html and the storefront template |
