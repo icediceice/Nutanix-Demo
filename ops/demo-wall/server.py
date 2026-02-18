@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import base64
 import json
 import os
 import ssl
@@ -52,6 +53,35 @@ def k8s_get_json(path: str):
         return {"_error": f"HTTP {e.code} for {path}"}
     except Exception as e:
         return {"_error": f"{type(e).__name__}: {e}"}
+
+
+def _read_secret_b64(namespace: str, name: str, key: str) -> str:
+    """Read a base64-encoded value from a k8s Secret. Returns '' on any error."""
+    secret = k8s_get_json(f"/api/v1/namespaces/{namespace}/secrets/{name}")
+    if "_error" in secret:
+        return ""
+    raw = (secret.get("data") or {}).get(key, "")
+    if not raw:
+        return ""
+    try:
+        return base64.b64decode(raw).decode("utf-8").strip()
+    except Exception:
+        return ""
+
+
+def _discover_kommander_password() -> str:
+    """Try known NKP/DKP secret locations for the SSO admin password."""
+    candidates = [
+        ("kommander-default-workspace", "dkp-admin-user-password", "password"),
+        ("kommander",                   "dkp-admin-user-password", "password"),
+        ("kommander-default-workspace", "kommander-admin-credentials", "password"),
+        ("kommander",                   "kommander-admin-credentials", "password"),
+    ]
+    for ns, sname, skey in candidates:
+        val = _read_secret_b64(ns, sname, skey)
+        if val:
+            return val
+    return ""
 
 
 def get_nested(obj, keys, default=None):
@@ -312,10 +342,18 @@ def _build_link(name, url, status, hint="", command="", username="", password=""
 
 def build_quick_links():
     links = []
-    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "")
-    kommander_sso_pass = os.environ.get("KOMMANDER_SSO_PASSWORD", "")
+
+    # Credentials: env vars take precedence; fall back to auto-discovery from cluster secrets.
     argocd_user = os.environ.get("ARGOCD_USERNAME", "admin")
-    argocd_pass = os.environ.get("ARGOCD_PASSWORD", "")
+    argocd_pass = (
+        os.environ.get("ARGOCD_PASSWORD", "")
+        or _read_secret_b64("argocd", "argocd-initial-admin-secret", "password")
+    )
+    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "") or "admin"
+    kommander_sso_pass = (
+        os.environ.get("KOMMANDER_SSO_PASSWORD", "")
+        or _discover_kommander_password()
+    )
 
     kommander_ingress_base = ""
     kommander_ingress_probe = ""
