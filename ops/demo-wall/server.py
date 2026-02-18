@@ -726,6 +726,10 @@ def build_payload():
         "keda": keda,
         "quota": quota,
         "links": links,
+        "scenarios": [
+            {"branch": k, "intent": v["intent"], "next": v.get("next", "")}
+            for k, v in SCENARIO_META.items()
+        ],
     }
 
 
@@ -763,6 +767,21 @@ def serve(port: int):
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
                 self.wfile.write(data)
+                return
+
+            if self.path in ("/quickref", "/quickref.html"):
+                qr_path = os.path.join(here, "quickref.html")
+                try:
+                    with open(qr_path, "rb") as f:
+                        data = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(data)
+                except FileNotFoundError:
+                    self.send_response(404)
+                    self.end_headers()
                 return
 
             self.send_response(404)
