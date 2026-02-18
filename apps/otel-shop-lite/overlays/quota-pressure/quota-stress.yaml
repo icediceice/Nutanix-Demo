@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quota-stress
+  namespace: demo-app
+  labels:
+    app: quota-stress
+    version: v1
+spec:
+  replicas: 20
+  selector:
+    matchLabels:
+      app: quota-stress
+  template:
+    metadata:
+      labels:
+        app: quota-stress
+        version: v1
+    spec:
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
