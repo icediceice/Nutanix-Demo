@@ -716,6 +716,7 @@ def build_payload():
             "error": 0,
             "compliance": compliance,
             "status": policy_status,
+            "enforcing": target_rev == "scenario/policy-enforce",
         },
         "kpi": [
             {"name": "CD Success Rate", "value": f"{cd_rate}%", "status": "good" if cd_ok else "warn", "threshold": "Synced+Healthy"},
