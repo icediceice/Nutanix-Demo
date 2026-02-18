@@ -7,9 +7,7 @@
 - ArgoCD installed in `argocd` namespace (this demo deploys via ArgoCD)
 - Istio + Kiali + Grafana/Loki + Jaeger available (Kommander-managed workload add-ons)
 - Gatekeeper installed and running
-- Image registry access to pull demo images
-  - If `ghcr.io/icediceice/otel-shop-lite-*` images are private, create `secret/ghcr-pull` in `demo-app` (see `docs/ghcr-pull-secret.md`)
-  - If you export `GHCR_USERNAME` + `GHCR_TOKEN` (or pass `--ghcr-token-file`) before running `./scripts/bootstrap-demo.sh`, the bootstrap script will create/update `demo-app/secret ghcr-pull` automatically.
+- Image registry access to pull demo images (images are public; no registry credentials required)
 - Local operator needs kubeconfig for the target workload cluster.
   - Recommended convention: keep kubeconfigs under `auth/` (ignored by git), e.g. `auth/workload02.conf`
 - Local operator needs `kubectl` in `PATH`.
