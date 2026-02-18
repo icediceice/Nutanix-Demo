@@ -8,7 +8,7 @@ Provide a branch-driven, repeatable partner demo for NKP Rx that shows:
 - Governance posture with Gatekeeper policy in audit mode
 - Audience-facing KPI visibility through the Demo Wall
 
-This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
+This spec reflects the current repository structure and design intent.
 
 ## 2. Demo Goals
 - Demonstrate change control by switching the Git branch (ArgoCD targetRevision), not live-editing YAML.
@@ -25,9 +25,9 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
 - `mesh`: Istio `DestinationRule` and `VirtualService` overlays for traffic weights and optional mirroring.
 - `ops`: k6 load generator base and overlays (`baseline`, `peak`, `off`).
 - `prereqs`: Required/optional/sensitive template grouping and guidance.
-- `partner`: Operator runbooks, scenario matrix, command sheet, reset/troubleshooting, KPI notes, Demo Wall assets.
-- `docs`: Runbook and verification checklist used for preflight and live operation.
-- `WOW.md`: KPI/policy objective definition for audience impact.
+- `docs`: All documentation — operator guide (`DEMO-GUIDE.md`), NKP console guide, prereqs, troubleshooting, reset, architecture, spec, checklists.
+- `docs`: Architecture reference, spec, verification checklist, KEDA notes.
+- `PROGRESS.md`: Improvement backlog and session log (repo root).
 
 ## 4. Reference Architecture
 1. ArgoCD Application/rx-demo watches scenario branches via `spec.source.targetRevision`.
@@ -83,7 +83,7 @@ This spec reflects the current repository content in `C:\Git\Nutanix-Demo`.
   - `off`: replicas `0`
 
 ## 8. Scenario Model (Branch-Driven)
-Branch switching is the demo control plane (`partner/SCENARIOS.md`):
+Branch switching is the demo control plane (see `docs/DEMO-GUIDE.md §4`):
 - `scenario/baseline`: normal app, weight-0, baseline load
 - `scenario/load-off`: normal app, weight-0, load off
 - `scenario/load-peak`: normal app, weight-0, peak load
@@ -95,7 +95,7 @@ Branch switching is the demo control plane (`partner/SCENARIOS.md`):
 - `scenario/mirror-v2`: optional mirror mode, baseline load
 
 ## 9. Demo Wall and KPI Contract
-Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
+Demo Wall (`ops/demo-wall/`) refreshes every 5 seconds and shows:
 - Scenario branch, CD revision, CD sync/health
 - Loadgen desired/ready replicas
 - Canary weights (v1/v2)
@@ -108,7 +108,8 @@ Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
 
 ## 10. End-to-End Demo Script
 1. Preflight:
-   - Validate prereqs (`partner/PREREQS.md`, `docs/verification-checklist.md`).
+   - Validate prereqs (`docs/PREREQS.md`, `docs/verification-checklist.md`).
+   - Full step-by-step flow: `docs/DEMO-GUIDE.md §3`.
    - Confirm ArgoCD `rx-demo` is `Synced` and `Healthy`.
 2. Baseline:
    - Run `scenario/baseline`; confirm healthy app and baseline traffic.
@@ -125,11 +126,11 @@ Demo Wall (`partner/demo-wall`) refreshes every 5 seconds and shows:
    - End on `scenario/load-off`.
 
 ## 11. Operational Commands and Recovery
-- Primary operator command pack: `partner/COMMANDS.md`.
+- Primary operator guide with commands: `docs/DEMO-GUIDE.md §5`.
 - Reset methods:
   - Fast reset: branch to baseline + reconcile.
   - Hard reset: delete `demo-app` and `demo-ops`, let ArgoCD recreate.
-- Troubleshooting: `partner/TROUBLESHOOTING.md`.
+- Troubleshooting: `docs/TROUBLESHOOTING.md`.
 
 ## 12. Acceptance Criteria
 - ArgoCD Application `rx-demo` is `Synced` and `Healthy`.

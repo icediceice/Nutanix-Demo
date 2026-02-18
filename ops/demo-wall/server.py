@@ -9,6 +9,20 @@ import urllib.request
 import urllib.parse
 
 
+SCENARIO_META = {
+    "scenario/baseline":         {"intent": "Stable baseline — 100% traffic to v1, load active", "next": "canary-10"},
+    "scenario/load-off":         {"intent": "Load off — cluster at rest, safe to inspect", "next": "baseline"},
+    "scenario/load-peak":        {"intent": "Peak load — stress-testing v1 capacity", "next": "baseline"},
+    "scenario/canary-10":        {"intent": "Progressive delivery — 10% traffic shifted to v2", "next": "canary-50"},
+    "scenario/canary-50":        {"intent": "Progressive delivery — 50 / 50 split, compare RED metrics", "next": "canary-100"},
+    "scenario/canary-100":       {"intent": "Full cutover — 100% traffic on v2", "next": "incident-latency"},
+    "scenario/incident-latency": {"intent": "Incident drill — v2 injecting 1 s latency, watch Jaeger traces", "next": "incident-error"},
+    "scenario/incident-error":   {"intent": "Incident drill — v2 returning 10% errors, watch Kiali graph", "next": "baseline"},
+    "scenario/mirror-v2":        {"intent": "Traffic mirroring — v2 receives shadow copies silently", "next": "baseline"},
+    "scenario/keda-checkout":    {"intent": "Autoscaling — checkout-api scales to zero when idle", "next": "baseline"},
+}
+
+
 def _k8s_request(path: str):
     host = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
     port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
@@ -558,6 +572,7 @@ def build_payload():
     sync_status = get_nested(app, ["status", "sync", "status"], "Unknown")
     health_status = get_nested(app, ["status", "health", "status"], "Unknown")
     revision = get_nested(app, ["status", "sync", "revision"], "unknown")
+    meta = SCENARIO_META.get(target_rev, {"intent": "", "next": ""})
 
     # Loadgen
     load = k8s_get_json("/apis/apps/v1/namespaces/demo-ops/deployments/demo-loadgen")
@@ -612,6 +627,8 @@ def build_payload():
             "revision": revision,
             "sync": sync_status,
             "health": health_status,
+            "intent": meta["intent"],
+            "next": meta["next"],
         },
         "loadgen": {
             "desiredReplicas": desired,

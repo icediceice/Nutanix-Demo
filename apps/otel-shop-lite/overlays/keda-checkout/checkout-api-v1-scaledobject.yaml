@@ -1,0 +1,20 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: checkout-api-v1-keda
+  namespace: demo-app
+spec:
+  scaleTargetRef:
+    name: checkout-api-v1
+  pollingInterval: 5
+  cooldownPeriod: 60
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus.default.svc.cluster.local:9090 # replaced via keda-prometheus ConfigMap
+        metricName: checkout_api_rps
+        query: sum(rate(istio_requests_total{destination_service_name="checkout-api",destination_service_namespace="demo-app"}[1m]))
+        threshold: "0.2"
+

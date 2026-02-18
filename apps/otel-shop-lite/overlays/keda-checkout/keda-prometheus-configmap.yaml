@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keda-prometheus
+  namespace: demo-app
+data:
+  # Update this to point at your in-cluster Prometheus (or a Thanos query frontend).
+  # KEDA Prometheus scaler expects an HTTP endpoint it can query.
+  serverAddress: http://kube-prometheus-stack-prometheus.kommander-default-workspace.svc.cluster.local:9090
+
