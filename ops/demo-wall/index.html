@@ -128,6 +128,20 @@
       opacity: .75;
     }
     .next-hint strong { color: var(--accent); font-style: normal; font-weight: 600; }
+    .keda-bar-wrap {
+      margin-top: 10px;
+      height: 5px;
+      background: var(--line);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .keda-bar {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--nx-green);
+      transition: width 1.2s ease;
+      width: 0%;
+    }
     .good { color: var(--good); }
     .bad  { color: var(--bad); }
     .warn { color: var(--warn); }
@@ -234,6 +248,12 @@
       <article class="card">
         <div class="label">Policy</div>
         <div id="policy" class="value">-</div>
+      </article>
+      <article class="card" id="kedaCard" style="display:none">
+        <div class="label">Autoscaler (KEDA)</div>
+        <div id="kedaStatus" class="value">-</div>
+        <div id="kedaReplicas" class="sub">-</div>
+        <div class="keda-bar-wrap"><div id="kedaBar" class="keda-bar"></div></div>
       </article>
     </section>
 
@@ -384,6 +404,32 @@
 
       const policy = data.policy || {};
       setText("policy", `${safe(policy.compliance)}% (${safe(policy.status)})`, statusClass(policy.status));
+
+      const keda = data.keda || {};
+      const kedaCard = document.getElementById("kedaCard");
+      if (kedaCard) {
+        if (keda.enabled) {
+          kedaCard.style.display = "";
+          const kedaStatusEl = document.getElementById("kedaStatus");
+          if (kedaStatusEl) {
+            kedaStatusEl.textContent = keda.active ? "Active \u2191 scaling" : "Idle \u00b7 scaled to zero";
+            kedaStatusEl.className = "value " + (keda.active ? "good" : "warn");
+          }
+          const kedaReplicasEl = document.getElementById("kedaReplicas");
+          if (kedaReplicasEl) {
+            kedaReplicasEl.textContent = `checkout-api-v1: ${keda.currentReplicas} ready  \u00b7  range: ${keda.minReplicas}\u2013${keda.maxReplicas}`;
+          }
+          const kedaBar = document.getElementById("kedaBar");
+          if (kedaBar) {
+            const pct = keda.maxReplicas > 0
+              ? Math.round((keda.currentReplicas / keda.maxReplicas) * 100)
+              : 0;
+            kedaBar.style.width = pct + "%";
+          }
+        } else {
+          kedaCard.style.display = "none";
+        }
+      }
 
       renderKpis(data.kpi || []);
       renderLinks(data.links || []);
