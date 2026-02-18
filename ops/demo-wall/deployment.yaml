@@ -12,6 +12,7 @@ spec:
     metadata:
       labels:
         app: demo-wall
+        version: v1
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
@@ -46,6 +47,13 @@ spec:
                   name: demo-wall-access
                   key: argocd_password
                   optional: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           ports:
             - containerPort: 8080
           readinessProbe:
