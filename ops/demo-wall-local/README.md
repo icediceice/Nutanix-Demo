@@ -24,4 +24,4 @@ kubectl -n demo-ops port-forward svc/demo-wall 9090:80
 Open: `http://localhost:9090`
 
 ## Legacy (local script)
-The local PowerShell script (`partner/demo-wall/start-demo-wall.ps1`) is not used in the ArgoCD demo.
+The local PowerShell script (`ops/demo-wall-local/start-demo-wall.ps1`) is not used in the ArgoCD demo.
