@@ -67,6 +67,25 @@ pending, and decisions made. Update it at the end of every work block.
 
 ---
 
+### Session 4
+
+**Implemented:**
+- ✅ Operator Quick Reference page (`ops/demo-wall/quickref.html`) at `/quickref`
+  - Pre-demo checklist
+  - Platform Access table with username/password shown prominently + one-click copy buttons
+  - Port-forward commands section (auto-hides when all tools have LoadBalancer URLs)
+  - Scenario reference table (live from `/api/status` payload)
+  - Environment Setup guide — which env vars to set and the exact `kubectl` commands to get each credential
+  - Switch-scenario kubectl command with copy button
+- ✅ `server.py`: `/quickref` route + `scenarios[]` added to `/api/status` JSON payload
+- ✅ `index.html`: "Quick Ref ↗" button in header linking to `/quickref`
+- ✅ `kustomization.yaml`: `quickref.html` added to ConfigMap generator
+
+**Commits:**
+- `461b246` — feat: add operator Quick Reference page with credentials
+
+---
+
 ## Improvement backlog
 
 Priority: **High** = do next session | **Med** = plan soon | **Low** = nice to have
