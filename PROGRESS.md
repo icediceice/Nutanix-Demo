@@ -18,7 +18,7 @@ pending, and decisions made. Update it at the end of every work block.
 
 ## Session log
 
-### Session 3 (current)
+### Session 3
 
 **Implemented:**
 - ✅ Trace ID → Jaeger deep link in storefront (`apps/otel-shop-lite/src/services/frontend.py`)
@@ -28,12 +28,20 @@ pending, and decisions made. Update it at the end of every work block.
 - ✅ Scenario intent + "Next →" cue in Demo Wall (`ops/demo-wall/server.py` + `ops/demo-wall/index.html`)
   - `SCENARIO_META` dict maps every branch to a 1-line intent string and the logical next branch
   - Scenario card in Demo Wall shows the intent sub-line and a "Next →" hint
-- ✅ Consolidated operator guide (`partner/DEMO-GUIDE.md`) — replaces RUNBOOK.md + QUICKSTART.md + COMMANDS.md as the primary reference for operators running the demo
-- ✅ NKP console platform guide (`partner/NKP-CONSOLE-GUIDE.md`) — maps each platform beat to the right NKP UI surface with exact navigation paths
+- ✅ Consolidated operator guide (`docs/DEMO-GUIDE.md`) — replaces RUNBOOK.md + QUICKSTART.md + COMMANDS.md
+- ✅ NKP console platform guide (`docs/NKP-CONSOLE-GUIDE.md`) — maps each platform beat to the right NKP UI surface
 - ✅ CLAUDE.md progress-doc rule added — ensures future sessions update this file
+- ✅ Obsolete docs moved to `obsolete/` — RUNBOOK, QUICKSTART, COMMANDS, SCENARIOS, showtimes, kpi/README, WOW, AGENTS, argocd-quickstart, demo-operator-runbook
+- ✅ `partner/` directory dissolved — all docs moved to `docs/`, demo-wall assets moved to `ops/demo-wall-local/`
+- ✅ All cross-references updated across CLAUDE.md, README.md, docs/architect.md, docs/demo-spec.md
 
 **Skipped:**
 - ⏭️ `scripts/switch-scenario.sh` — ArgoCD UI branch switch is already simple enough; user confirmed skip
+
+**Commits on main (pending push to scenario branches):**
+- `57efcd4` — refactor: consolidate docs, add trace link, scenario intent, progress tracker
+- `4c233be` — docs: retire obsolete docs/ files and fix stale references
+- `0da585c` — refactor: dissolve partner/ into docs/ and ops/
 
 ---
 
