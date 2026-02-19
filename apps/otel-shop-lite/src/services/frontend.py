@@ -679,10 +679,10 @@ def _render_frontend(version: str) -> tuple[str, str]:
       const item = payload.item || {};
       const recs = (payload.recommendations || []).map(r => r.id).join(", ") || "none";
       productInfoEl.textContent =
-        "sku    " + (item.id   || "n/a") + "\n" +
-        "name   " + (item.name || "n/a") + "\n" +
-        "price  $" + Number(item.price || 0).toFixed(2) + "\n" +
-        "source " + (payload.source || "n/a") + "\n" +
+        "sku    " + (item.id   || "n/a") + "\\n" +
+        "name   " + (item.name || "n/a") + "\\n" +
+        "price  $" + Number(item.price || 0).toFixed(2) + "\\n" +
+        "source " + (payload.source || "n/a") + "\\n" +
         "recs   " + recs;
     }
 
