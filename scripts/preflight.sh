@@ -76,6 +76,64 @@ for ns in demo-app demo-ops; do
 done
 
 echo
+echo "Namespace cross-check (ArgoCD render vs cluster):"
+if have kustomize; then
+  KUSTOMIZE_CMD="kustomize build"
+elif "$KUBECTL" kustomize clusters/rx-demo/argocd/root >/dev/null 2>&1; then
+  KUSTOMIZE_CMD="$KUBECTL kustomize"
+else
+  warn "neither kustomize nor kubectl kustomize available — skipping namespace cross-check"
+  KUSTOMIZE_CMD=""
+fi
+
+if [[ -n "${KUSTOMIZE_CMD:-}" ]]; then
+  # Extract every unique namespace referenced in the rendered manifests.
+  # Excludes lines inside 'name:' fields of kind: Namespace resources (we only
+  # want the consumer side, not the definitions themselves).
+  RENDER_FILE=$(mktemp /tmp/preflight-render.XXXXXX.yaml)
+  $KUSTOMIZE_CMD clusters/rx-demo/argocd/root >"$RENDER_FILE" 2>/dev/null || {
+    warn "kustomize build failed — skipping namespace cross-check"
+    rm -f "$RENDER_FILE"
+    KUSTOMIZE_CMD=""
+  }
+fi
+
+if [[ -n "${KUSTOMIZE_CMD:-}" && -f "${RENDER_FILE:-/dev/null}" ]]; then
+  ns_missing=0
+  while IFS= read -r ns; do
+    [[ -z "$ns" ]] && continue
+    if ! "$KUBECTL" get namespace "$ns" >/dev/null 2>&1; then
+      warn "ArgoCD render references namespace '$ns' — NOT FOUND in cluster"
+      ns_missing=$((ns_missing + 1))
+    fi
+  done < <(
+    python3 - "$RENDER_FILE" <<'PYEOF'
+import sys, yaml
+with open(sys.argv[1]) as f:
+    docs = list(yaml.safe_load_all(f))
+ns_set = set()
+for doc in docs:
+    if not isinstance(doc, dict):
+        continue
+    meta = doc.get("metadata") or {}
+    if doc.get("kind") == "Namespace":
+        continue  # skip definitions; we want consumers
+    ns = meta.get("namespace", "")
+    if ns:
+        ns_set.add(ns)
+for ns in sorted(ns_set):
+    print(ns)
+PYEOF
+  )
+  rm -f "$RENDER_FILE"
+  if [[ "$ns_missing" -eq 0 ]]; then
+    echo "all namespaces present in cluster"
+  else
+    warn "$ns_missing namespace(s) missing — ArgoCD will fail to sync until they exist"
+  fi
+fi
+
+echo
 echo "External Access:"
 if "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway >/dev/null 2>&1; then
   "$KUBECTL" -n istio-helm-gateway-ns get svc istio-helm-ingressgateway -o wide
