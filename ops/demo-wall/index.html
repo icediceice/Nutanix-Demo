@@ -215,6 +215,16 @@
     .next-btn strong { font-weight: 600; }
     .next-btn:hover  { background: rgba(0,145,218,.22); border-color: rgba(0,145,218,.6); color: #fff; }
     .next-btn.switching { opacity: .55; cursor: wait; }
+    .end-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 10px; margin-left: 6px; padding: 4px 12px;
+      background: rgba(255,82,82,.08); border: 1px solid rgba(255,82,82,.25);
+      border-radius: 999px; color: var(--muted);
+      font-size: .72rem; font-family: "Work Sans", sans-serif;
+      cursor: pointer; transition: background .15s, border-color .15s, color .15s;
+    }
+    .end-btn:hover { background: rgba(255,82,82,.18); border-color: rgba(255,82,82,.5); color: var(--bad); }
+    .end-btn.switching { opacity: .55; cursor: wait; }
 
     /* ── Switch modal ── */
     .switch-overlay {
@@ -506,6 +516,15 @@
           btn.addEventListener("click", function() { handleSwitch(fullBranch); });
           nextEl.appendChild(btn);
         }
+        // "End Demo" button — shown on every scenario except load-off itself
+        if (safe(cd.branch) !== "scenario/load-off") {
+          const endBtn = document.createElement("button");
+          endBtn.className = "end-btn";
+          endBtn.innerHTML = "&#9632; End Demo";
+          endBtn.title = "Switch to scenario/load-off — stop loadgen";
+          endBtn.addEventListener("click", function() { handleSwitch("scenario/load-off"); });
+          nextEl.appendChild(endBtn);
+        }
       }
 
       const healthEl = document.getElementById("cdHealth");
@@ -651,7 +670,7 @@
 
     async function doSwitch(branch) {
       document.getElementById("switchModal").style.display = "none";
-      document.querySelectorAll(".next-btn").forEach(b => {
+      document.querySelectorAll(".next-btn, .end-btn").forEach(b => {
         b.disabled = true; b.classList.add("switching");
       });
       try {
@@ -670,7 +689,7 @@
       } catch (err) {
         showToast("Switch failed: " + err, "bad");
       } finally {
-        document.querySelectorAll(".next-btn").forEach(b => {
+        document.querySelectorAll(".next-btn, .end-btn").forEach(b => {
           b.disabled = false; b.classList.remove("switching");
         });
       }
