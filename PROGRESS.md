@@ -18,6 +18,59 @@ pending, and decisions made. Update it at the end of every work block.
 
 ## Session log
 
+### Session 10
+
+**Implemented:**
+- ✅ Restructured `docs/DEMO-GUIDE.md` §3 from 17 flat beats into a **4-Act narrative** with audience tags, time estimates, and transition scripts
+  - **Act 1 — "The Platform"** (~10 min): Beats 1–4. Merged old Beats 3+4 (add-ons + quotas) and old Beats 5+9 (RBAC + policy dryrun) into tighter "guardrails" beats.
+  - **Act 2 — "Ship It"** (~18 min): Beats 5–9. Added Beat 7 (distributed traces in Jaeger — existing trace link feature, no code needed) and Beat 9 (shadow testing with `scenario/mirror-v2` — existing scenario, no code needed).
+  - **Act 3 — "Break It, Find It, Fix It"** (~18 min): Beats 10–14. Added Beat 12 (error injection with `scenario/incident-error` — existing scenario) and Beat 13 (trace → log correlation via `kubectl logs` grep or Loki query).
+  - **Act 4 — "Go Deeper"**: Beats 15–18. Organized as two self-contained tracks: Track A (Guardrails & Compliance: quota + policy enforce) and Track B (Resilience & Autoscaling: node failure + KEDA). Beat 16 callbacks to Act 1 dryrun for narrative arc.
+  - Beat 19: End session (`scenario/load-off`)
+- ✅ Added **§3.5 Recommended run paths** — 5 audience profiles (exec, dev, ops, infra, full) with beat lists and time estimates
+- ✅ Updated **§4 scenario reference table** — added "Used in" column mapping each branch to its beat numbers; updated `mirror-v2` logical next to `canary-10`
+- ✅ Updated `CLAUDE.md` scenario table: `mirror-v2` now notes its demo beat (Beat 9)
+
+**Files changed:**
+- `docs/DEMO-GUIDE.md` — major rewrite of §3, new §3.5, updated §4
+- `docs/Get-On-Event-Track.md` — **new file**: 2-hour presentation plan for Get On distributor partner event. Includes 11-segment timeline, partner-focused talking points per beat, pre-event checklist, competitive positioning notes, partner opportunity framing, post-event follow-up, and quick reference card template.
+- `CLAUDE.md` — scenario table annotation for mirror-v2; added Get On event track to quick orientation table
+- `PROGRESS.md` — this entry
+
+**No code changes.** No new scenarios, overlays, or server.py modifications. Pure documentation.
+
+---
+
+### Session 9
+
+**Implemented:**
+- ✅ Documented `scenario/node-failure` — was fully implemented (overlay, SCENARIO_META, RBAC) but had no DEMO-GUIDE beat or CLAUDE.md entry
+  - Added Beat 17 to `docs/DEMO-GUIDE.md` — cordon/drain walkthrough, NKP CAPI auto-replace narrative, PDB explanation
+  - Added row to DEMO-GUIDE.md §4 scenario reference table
+- ✅ Added 3 missing branches to `CLAUDE.md` scenario table: `quota-pressure`, `policy-enforce`, `node-failure`
+- ✅ Fixed Beat 15 error message: example pod has `app` label but is missing `version` — Gatekeeper rejects with "label 'version' is required", not "label 'app' is required"
+
+**Branch staleness audit (all 3 undocumented branches):**
+All three branches (`node-failure`, `policy-enforce`, `quota-pressure`) are stale — forked before Sessions 6-8 and missing: OTEL exporter fix, clipboard copy fix, trace ID display changes, `seed_demo_wall_access()` in bootstrap, CLAUDE.md. They also carry artifacts (AGENTS.md, duplicate README KEDA section, unnecessary `- keda` in platform/kustomization.yaml). They need a rebase onto current main before use.
+
+---
+
+### Session 8
+
+**Implemented:**
+- ✅ Fixed Jaeger tracing — traces now appear in Jaeger with all 4 app services
+  - Root cause: `otel-shop-config` ConfigMap pointed at `jaeger-collector.kommander.svc.cluster.local:4317` — both the service name and namespace were wrong (namespace `kommander` doesn't exist)
+  - Fix: updated to `jaeger-jaeger-operator-jaeger-collector.istio-system.svc.cluster.local:4317` (the actual Jaeger Operator-deployed collector)
+  - Applied to `main` + all 13 `scenario/*` branches
+  - Verified: Jaeger API now returns services `frontend`, `catalog-api`, `checkout-api`, `payment-mock`; traces with 7 spans confirmed
+- Note: Jaeger UI is served at base path `/dkp/jaeger/` (NKP convention); API path is `/dkp/jaeger/api/...`
+
+**Commits:**
+- `faf32fa` on `main` — fix: point OTEL exporter at actual Jaeger collector in istio-system
+- Cherry-picked to all 13 scenario branches
+
+---
+
 ### Session 3
 
 **Implemented:**
