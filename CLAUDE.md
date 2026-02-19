@@ -12,6 +12,7 @@ This is a **branch-driven GitOps demo** for NKP Rx. The control plane is ArgoCD 
 | **How do I run the demo?** | **`docs/DEMO-GUIDE.md`** ← single source of truth for operators |
 | Which features to show in NKP console? | `docs/NKP-CONSOLE-GUIDE.md` |
 | Scenario branches and intent | `docs/DEMO-GUIDE.md §4` |
+| Get On event (2-hr partner demo) | `docs/Get-On-Event-Track.md` |
 | Troubleshooting / reset | `docs/TROUBLESHOOTING.md`, `docs/RESET.md` |
 | Full technical spec | `docs/demo-spec.md` |
 | Architecture deep-dive | `docs/architect.md` |
@@ -74,8 +75,11 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 | `scenario/canary-100` | normal | 0/100 | baseline |
 | `scenario/incident-latency` | latency fault | 90/10 | baseline |
 | `scenario/incident-error` | error fault (10%) | 90/10 | baseline |
-| `scenario/mirror-v2` | normal | mirror | baseline |
+| `scenario/mirror-v2` | normal | mirror (Beat 9) | baseline |
 | `scenario/keda-checkout` | normal | weight-0 | KEDA-driven |
+| `scenario/quota-pressure` | quota-pressure | weight-0 | baseline |
+| `scenario/policy-enforce` | normal | weight-0 | baseline |
+| `scenario/node-failure` | node-failure (2-replica HA + PDBs) | weight-0 | baseline |
 
 Always end sessions on `scenario/load-off`.
 
