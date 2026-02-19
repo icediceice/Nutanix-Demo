@@ -10,7 +10,7 @@ cd "${REPO_ROOT}"
 
 APP_NAME="${APP_NAME:-rx-demo}"
 ARGO_NS="${ARGO_NS:-argocd}"
-WORKSPACE_NS="${WORKSPACE_NS:-kommander-default-workspace}"
+WORKSPACE_NS="${WORKSPACE_NS:-}"
 
 REPO_URL_DEFAULT="https://github.com/icediceice/Nutanix-Demo.git"
 BRANCH_DEFAULT="scenario/load-off"
@@ -136,6 +136,76 @@ kc_mgmt() {
   if [[ -n "${MGMT_KUBECONFIG_PATH}" ]]; then args+=(--kubeconfig "${MGMT_KUBECONFIG_PATH}"); fi
   if [[ -n "${MGMT_CONTEXT_NAME}" ]]; then args+=(--context "${MGMT_CONTEXT_NAME}"); fi
   "$KUBECTL" "${args[@]}" "$@"
+}
+
+autodetect_workspace_ns() {
+  # If user explicitly set --workspace-namespace, keep it.
+  if [[ -n "${WORKSPACE_NS}" ]]; then
+    return 0
+  fi
+
+  # Try label-based discovery: NKP assigns workspace namespaces with this label.
+  local ws_ns
+  ws_ns="$(kc get ns -l workspaces.kommander.mesosphere.io/workspace-name \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  if [[ -n "${ws_ns}" ]]; then
+    WORKSPACE_NS="${ws_ns}"
+    echo "Auto-detected workspace namespace: ${WORKSPACE_NS}"
+    return 0
+  fi
+
+  # Try via management kubeconfig if provided.
+  if [[ -n "${MGMT_KUBECONFIG_PATH}" || -n "${MGMT_CONTEXT_NAME}" ]]; then
+    ws_ns="$(kc_mgmt get ns -l workspaces.kommander.mesosphere.io/workspace-name \
+      -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+    if [[ -n "${ws_ns}" ]]; then
+      WORKSPACE_NS="${ws_ns}"
+      echo "Auto-detected workspace namespace (from mgmt cluster): ${WORKSPACE_NS}"
+      return 0
+    fi
+  fi
+
+  # Fallback.
+  WORKSPACE_NS="kommander-default-workspace"
+  warn "Could not auto-detect workspace namespace; falling back to '${WORKSPACE_NS}'."
+  warn "If this is wrong, re-run with --workspace-namespace <ns>."
+}
+
+discover_jaeger_endpoint() {
+  # Search the cluster for Jaeger collector services and return the OTLP gRPC endpoint.
+  # Tries well-known NKP patterns first, then falls back to a broad service search.
+  local ns svc_name endpoint
+
+  # Pattern 1: NKP operator-deployed Jaeger in istio-system.
+  for svc_name in jaeger-jaeger-operator-jaeger-collector jaeger-collector; do
+    for ns in istio-system "${WORKSPACE_NS}" observability; do
+      if kc get svc "${svc_name}" -n "${ns}" >/dev/null 2>&1; then
+        endpoint="http://${svc_name}.${ns}.svc.cluster.local:4317"
+        echo "${endpoint}"
+        return 0
+      fi
+    done
+  done
+
+  return 1
+}
+
+verify_jaeger_endpoint() {
+  echo
+  echo "Verifying Jaeger collector endpoint..."
+  local discovered
+  if discovered="$(discover_jaeger_endpoint)"; then
+    echo "  Jaeger collector found: ${discovered}"
+    local current
+    current="$(grep 'OTEL_EXPORTER_OTLP_ENDPOINT=' apps/otel-shop-lite/base/kustomization.yaml 2>/dev/null | sed 's/.*=//' || true)"
+    if [[ -n "${current}" && "${current}" != "${discovered}" ]]; then
+      warn "Git ConfigMap has endpoint '${current}' but cluster has '${discovered}'."
+      warn "Consider updating apps/otel-shop-lite/base/kustomization.yaml and committing."
+    fi
+  else
+    warn "No Jaeger collector service found in cluster. Traces will be dropped until Jaeger is deployed."
+    warn "After Jaeger is available, verify the endpoint in apps/otel-shop-lite/base/kustomization.yaml."
+  fi
 }
 
 maybe_set_keda_prometheus_endpoint() {
@@ -464,9 +534,13 @@ echo "Target cluster:"
 kc cluster-info >/dev/null
 kc config current-context
 
+autodetect_workspace_ns
+
 maybe_suspend_demo_flux
 
 enable_kommander_apps
+
+verify_jaeger_endpoint
 
 echo
 echo "Installing/ensuring ArgoCD..."
