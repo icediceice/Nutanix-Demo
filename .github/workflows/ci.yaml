@@ -30,3 +30,60 @@ jobs:
           kustomize build apps >/tmp/render-apps.yaml
           kustomize build mesh >/tmp/render-mesh.yaml
           kustomize build ops >/tmp/render-ops.yaml
+
+      - name: Check namespace definitions
+        run: |
+          set -euo pipefail
+          # Every namespace referenced in the ArgoCD render must either be:
+          #   (a) defined as kind: Namespace in the same render, OR
+          #   (b) a known NKP/Kubernetes platform namespace (never commit to this repo)
+          # This prevents the class of bug where a resource targets a namespace that
+          # doesn't exist on the cluster (e.g. kommander-default-workspace).
+          python3 - <<'PYEOF'
+          import sys, yaml
+
+          PLATFORM_NAMESPACES = {
+              # Kubernetes builtins
+              "default", "kube-system", "kube-public", "kube-node-lease",
+              # ArgoCD (bootstrapped separately)
+              "argocd",
+              # NKP / Kommander managed (static names only — no workspace namespaces)
+              # NOTE: do NOT add kommander-default-workspace here. That is a dynamically
+              # named NKP workspace (the actual name is cluster-specific). Any resource
+              # in this repo that targets it is a bug — let the check catch it.
+              "kommander", "kommander-flux",
+              "cert-manager",
+              # Istio (installed by NKP via istio-helm)
+              "istio-system", "istio-helm-system", "istio-helm-gateway-ns",
+              # Jaeger / observability (installed by NKP)
+              "observability",
+          }
+
+          with open("/tmp/render-argocd.yaml") as f:
+              docs = list(yaml.safe_load_all(f))
+
+          defined_ns, referenced_ns = set(), set()
+          for doc in docs:
+              if not isinstance(doc, dict):
+                  continue
+              meta = doc.get("metadata") or {}
+              if doc.get("kind") == "Namespace":
+                  defined_ns.add(meta.get("name", ""))
+              ns = meta.get("namespace", "")
+              if ns:
+                  referenced_ns.add(ns)
+
+          unknown = referenced_ns - defined_ns - PLATFORM_NAMESPACES
+          if unknown:
+              print("FAIL: namespaces referenced in ArgoCD render but not defined in repo or platform allowlist:")
+              for ns in sorted(unknown):
+                  print(f"  - {ns}")
+              print()
+              print("Fix: either add a kind: Namespace manifest for each namespace above,")
+              print("or remove resources that target non-existent namespaces.")
+              sys.exit(1)
+
+          print(f"OK: all {len(referenced_ns)} referenced namespace(s) accounted for")
+          print(f"  repo-defined : {sorted(defined_ns)}")
+          print(f"  platform-ns  : {sorted(referenced_ns & PLATFORM_NAMESPACES)}")
+          PYEOF
