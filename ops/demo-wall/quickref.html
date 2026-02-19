@@ -296,8 +296,7 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
             <td><span class="env-key">Kommander / NKP SSO password</span></td>
             <td>
               <span class="env-how">
-                Auto-discovered workspace namespace (label <code>workspaces.kommander.mesosphere.io/workspace-name</code>)
-                → secret <code>dkp-admin-user-password</code> → key <code>password</code>
+                <code>kommander-default-workspace / dkp-admin-user-password</code> → <code>password</code>
                 <br>then <code>kommander / dkp-admin-user-password</code>
               </span>
             </td>
@@ -330,11 +329,8 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
         <pre class="cmd-box" style="margin-top:6px;font-size:.72rem;"># ArgoCD
 kubectl -n argocd get secret argocd-initial-admin-secret
 
-# Find the NKP workspace namespace (auto-discovered by the Demo Wall)
-kubectl get ns -l workspaces.kommander.mesosphere.io/workspace-name
-
-# Kommander / NKP SSO (replace WORKSPACE_NS with the name found above)
-kubectl -n WORKSPACE_NS get secret dkp-admin-user-password</pre>
+# Kommander / NKP SSO
+kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
       </div>
     </section>
 

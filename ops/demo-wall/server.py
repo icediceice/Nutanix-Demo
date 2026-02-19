@@ -207,7 +207,7 @@ def _discover_workspace_namespace() -> str:
 
     NKP stamps every workspace namespace with the label
     ``workspaces.kommander.mesosphere.io/workspace-name``.
-    Falls back to the legacy name so existing configs still work.
+    Falls back to the legacy name so default-path clusters still work.
     """
     data = k8s_get_json(
         "/api/v1/namespaces"
@@ -220,18 +220,33 @@ def _discover_workspace_namespace() -> str:
     return "kommander-default-workspace"
 
 
+def _kommander_cred_candidates(workspace_ns: str):
+    return [
+        ("kommander",  "dkp-credentials",             "username", "password"),
+        (workspace_ns, "dkp-credentials",             "username", "password"),
+        (workspace_ns, "dkp-admin-user-password",     "",         "password"),
+        ("kommander",  "dkp-admin-user-password",     "",         "password"),
+        (workspace_ns, "kommander-admin-credentials", "",         "password"),
+        ("kommander",  "kommander-admin-credentials", "",         "password"),
+    ]
+
+
 def _discover_kommander_password(workspace_ns: str = "kommander-default-workspace") -> str:
     """Try known NKP/DKP secret locations for the SSO admin password."""
-    candidates = [
-        (workspace_ns,  "dkp-admin-user-password",      "password"),
-        ("kommander",   "dkp-admin-user-password",      "password"),
-        (workspace_ns,  "kommander-admin-credentials",  "password"),
-        ("kommander",   "kommander-admin-credentials",  "password"),
-    ]
-    for ns, sname, skey in candidates:
-        val = _read_secret_b64(ns, sname, skey)
+    for ns, sname, _ukey, pkey in _kommander_cred_candidates(workspace_ns):
+        val = _read_secret_b64(ns, sname, pkey)
         if val:
             return val
+    return ""
+
+
+def _discover_kommander_username(workspace_ns: str = "kommander-default-workspace") -> str:
+    """Try known NKP/DKP secret locations for the SSO admin username."""
+    for ns, sname, ukey, pkey in _kommander_cred_candidates(workspace_ns):
+        if ukey and _read_secret_b64(ns, sname, pkey):
+            val = _read_secret_b64(ns, sname, ukey)
+            if val:
+                return val
     return ""
 
 
@@ -506,7 +521,11 @@ def build_quick_links():
         os.environ.get("ARGOCD_PASSWORD", "")
         or _read_secret_b64("argocd", "argocd-initial-admin-secret", "password")
     )
-    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "") or "admin"
+    kommander_sso_user = (
+        os.environ.get("KOMMANDER_SSO_USERNAME", "")
+        or _discover_kommander_username(workspace_ns)
+        or "admin"
+    )
     kommander_sso_pass = (
         os.environ.get("KOMMANDER_SSO_PASSWORD", "")
         or _discover_kommander_password(workspace_ns)
@@ -611,13 +630,11 @@ def build_quick_links():
     # returning 404. Check for the service first to avoid publishing a dead link.
     _kiali_svc_ns = None
     for _ns in [workspace_ns, "istio-system"]:
-        _probe = k8s_get_json(f"/api/v1/namespaces/{_ns}/services/kiali")
-        if "_error" not in _probe:
+        if "_error" not in k8s_get_json(f"/api/v1/namespaces/{_ns}/services/kiali"):
             _kiali_svc_ns = _ns
             break
 
     if _kiali_svc_ns is not None:
-        # Service exists — build URL via ingress base (SSO-authenticated path preferred).
         kiali_ing = (
             f"{kommander_ingress_base}/dkp/kiali"
             if kommander_ingress_base
@@ -633,7 +650,6 @@ def build_quick_links():
                 password=kommander_sso_pass,
             ))
         else:
-            # Ingress not exposed — offer a direct LB URL or port-forward.
             _kiali_svc_obj = k8s_get_json(f"/api/v1/namespaces/{_kiali_svc_ns}/services/kiali")
             remote = _service_lb_url(_kiali_svc_obj, preferred_ports=[20001, 80], default_scheme="http")
             port = _service_port(_kiali_svc_obj, preferred_ports=[20001, 80])
@@ -647,7 +663,6 @@ def build_quick_links():
                 kommander_sso_pass,
             ))
     else:
-        # No kiali service found — operator may be present but no instance deployed.
         links.append(_build_link(
             "Kiali",
             "",
