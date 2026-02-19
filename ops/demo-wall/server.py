@@ -11,18 +11,114 @@ import urllib.parse
 
 
 SCENARIO_META = {
-    "scenario/baseline":         {"intent": "Stable baseline — 100% traffic to v1, load active", "next": "canary-10"},
-    "scenario/load-off":         {"intent": "Load off — cluster at rest, safe to inspect", "next": "baseline"},
-    "scenario/load-peak":        {"intent": "Peak load — stress-testing v1 capacity", "next": "baseline"},
-    "scenario/canary-10":        {"intent": "Progressive delivery — 10% traffic shifted to v2", "next": "canary-50"},
-    "scenario/canary-50":        {"intent": "Progressive delivery — 50 / 50 split, compare RED metrics", "next": "canary-100"},
-    "scenario/canary-100":       {"intent": "Full cutover — 100% traffic on v2", "next": "incident-latency"},
-    "scenario/incident-latency": {"intent": "Incident drill — v2 injecting 1 s latency, watch Jaeger traces", "next": "incident-error"},
-    "scenario/incident-error":   {"intent": "Incident drill — v2 returning 10% errors, watch Kiali graph", "next": "baseline"},
-    "scenario/mirror-v2":        {"intent": "Traffic mirroring — v2 receives shadow copies silently", "next": "baseline"},
-    "scenario/keda-checkout":    {"intent": "Autoscaling — checkout-api scales to zero when idle", "next": "baseline"},
-    "scenario/quota-pressure":   {"intent": "Quota pressure — namespace at ~75% pod capacity, guardrails active", "next": "baseline"},
-    "scenario/policy-enforce":   {"intent": "Policy enforcement — Gatekeeper denying non-compliant pods at admission", "next": "baseline"},
+    "scenario/baseline": {
+        "intent": "Stable baseline — 100% traffic to v1, load active",
+        "next": "canary-10",
+        "watch": [
+            "ArgoCD: Synced + Healthy (both green)",
+            "Traffic: 100% v1 · loadgen baseline active",
+            "Policy: dryrun · 0 violations expected",
+        ],
+    },
+    "scenario/load-off": {
+        "intent": "Load off — cluster at rest, safe to inspect",
+        "next": "baseline",
+        "watch": [
+            "All pods running · no active traffic",
+            "Safe moment to walk through any UI or config",
+            "Switch to baseline to resume the demo",
+        ],
+    },
+    "scenario/load-peak": {
+        "intent": "Peak load — stress-testing v1 capacity",
+        "next": "baseline",
+        "watch": [
+            "Grafana: elevated RPS on frontend-v1",
+            "Watch CPU / memory creep on pod metrics",
+            "HPA triggers if resource thresholds are hit",
+        ],
+    },
+    "scenario/canary-10": {
+        "intent": "Progressive delivery — 10% traffic shifted to v2",
+        "next": "canary-50",
+        "watch": [
+            "Kiali: thin green edge to v2 (≈10% of requests)",
+            "Jaeger: new traces tagged service.version=v2",
+            "No error spike → safe to widen the canary",
+        ],
+    },
+    "scenario/canary-50": {
+        "intent": "Progressive delivery — 50 / 50 split, compare RED metrics",
+        "next": "canary-100",
+        "watch": [
+            "Kiali: equal-weight edges to v1 and v2",
+            "Grafana: compare v1 vs v2 latency side by side",
+            "No regressions → promote to 100%",
+        ],
+    },
+    "scenario/canary-100": {
+        "intent": "Full cutover — 100% traffic on v2",
+        "next": "incident-latency",
+        "watch": [
+            "Kiali: single thick edge — all traffic on v2",
+            "v1 pods still running · rollback = one patch command",
+            "Rollback SLA: restore canary-10 in under 3 minutes",
+        ],
+    },
+    "scenario/incident-latency": {
+        "intent": "Incident drill — v2 injecting 1 s latency, watch Jaeger traces",
+        "next": "incident-error",
+        "watch": [
+            "Jaeger: payment spans show 1 s+ duration on v2",
+            "Grafana: p99 latency spike on payment-mock-v2",
+            "Rollback: patch targetRevision → canary-10 to isolate",
+        ],
+    },
+    "scenario/incident-error": {
+        "intent": "Incident drill — v2 returning 10% errors, watch Kiali graph",
+        "next": "baseline",
+        "watch": [
+            "Kiali: red error edges on payment-mock-v2 (≈10% 5xx)",
+            "Grafana: error rate panel shows spike on v2",
+            "Jaeger: filter by status=ERROR to trace root cause",
+        ],
+    },
+    "scenario/mirror-v2": {
+        "intent": "Traffic mirroring — v2 receives shadow copies silently",
+        "next": "baseline",
+        "watch": [
+            "Kiali: dashed mirror edge to v2 — zero user impact",
+            "Jaeger: v2 traces appear without affecting v1 users",
+            "Compare v2 behaviour safely before promoting",
+        ],
+    },
+    "scenario/keda-checkout": {
+        "intent": "Autoscaling — checkout-api scales to zero when idle",
+        "next": "baseline",
+        "watch": [
+            "KEDA card: checkout-api replicas drop to 0 at rest",
+            "Send load · watch replicas climb back in real time",
+            "Grafana: pod count metric reflects scale events",
+        ],
+    },
+    "scenario/quota-pressure": {
+        "intent": "Quota pressure — namespace at ~75% pod capacity, guardrails active",
+        "next": "baseline",
+        "watch": [
+            "Quota card: pod usage approaching namespace limit",
+            "Gatekeeper: new pods blocked once hard limit is hit",
+            "Grafana: resource saturation panel turns amber",
+        ],
+    },
+    "scenario/policy-enforce": {
+        "intent": "Policy enforcement — Gatekeeper denying non-compliant pods at admission",
+        "next": "baseline",
+        "watch": [
+            "Policy card: enforcement mode = deny (red badge)",
+            "Try kubectl apply of a bad pod → admission denied",
+            "Violation count increments in real time",
+        ],
+    },
 }
 
 
@@ -694,6 +790,23 @@ def get_keda_status():
     }
 
 
+def build_workloads():
+    """Return replica health for all deployments in demo-app namespace."""
+    data = k8s_get_json("/apis/apps/v1/namespaces/demo-app/deployments")
+    if "_error" in data:
+        return []
+    result = []
+    for item in (data.get("items") or []):
+        name    = get_nested(item, ["metadata", "name"], "?")
+        desired = get_nested(item, ["spec", "replicas"], 0) or 0
+        ready   = get_nested(item, ["status", "readyReplicas"], 0) or 0
+        image   = get_nested(item, ["spec", "template", "spec", "containers", 0, "image"], "")
+        tag     = image.split(":")[-1] if ":" in image else image
+        status  = "good" if (ready >= desired and desired > 0) else ("warn" if ready > 0 else "bad")
+        result.append({"name": name, "ready": ready, "desired": desired, "tag": tag, "status": status})
+    return sorted(result, key=lambda x: x["name"])
+
+
 def build_payload():
     # ArgoCD app status
     app = k8s_get_json("/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo")
@@ -748,6 +861,7 @@ def build_payload():
     links = build_quick_links()
     keda = get_keda_status()
     quota = get_quota_status()
+    workloads = build_workloads()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -760,6 +874,7 @@ def build_payload():
             "health": health_status,
             "intent": meta["intent"],
             "next": meta["next"],
+            "watch": meta.get("watch", []),
         },
         "loadgen": {
             "desiredReplicas": desired,
@@ -783,6 +898,7 @@ def build_payload():
         ],
         "keda": keda,
         "quota": quota,
+        "workloads": workloads,
         "links": links,
         "scenarios": [
             {"branch": k, "intent": v["intent"], "next": v.get("next", "")}
