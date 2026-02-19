@@ -88,9 +88,30 @@ and a "Next →" hint for the following beat.
 
 ---
 
-## 3. Demo flow (complete sequence)
+## 3. Demo flow — 4-Act narrative
 
-### Beat 1 — Open the Demo Wall and introduce the stack
+> **Audience tags**: `Both` = everyone, `Dev` = developer-focused, `Ops` = ops / platform team.
+> Beats marked **(Optional)** can be skipped without breaking the flow.
+> See [§3.5 Recommended run paths](#35-recommended-run-paths) for audience-specific timing.
+
+---
+
+### Act 1 — "The Platform" (~10 min)
+
+*What NKP gives you before a single line of app code is written.*
+
+| Beat | Title | Scenario | Audience | ~Time |
+|------|-------|----------|----------|-------|
+| 1 | Open Demo Wall, introduce the stack | `scenario/baseline` | Both | 3 min |
+| 2 | Multi-cluster fleet (Kommander) | — | Ops | 2 min |
+| 3 | Platform add-ons + quotas | — | Both | 2 min |
+| 4 | Guardrails: RBAC + Policy (dryrun) | — | Ops | 3 min |
+
+---
+
+#### Beat 1 — Open the Demo Wall and introduce the stack
+
+**Scenario**: `scenario/baseline` | **Audience**: Both | **~3 min**
 
 **Action**: Open the Demo Wall. Set scenario to `scenario/baseline`.
 
@@ -100,14 +121,16 @@ and a "Next →" hint for the following beat.
 - Traffic: `v1 / v2 = 100 / 0`
 - Policy: compliance %
 
-**What you say**: _"This is the NKP GitOps demo. Everything on screen is live — the
-Demo Wall pulls from the Kubernetes API every five seconds. The only way to
-change the cluster state is to change the Git branch. No kubectl apply, no
-live YAML edits."_
+**What you say**: _"Everything on screen is live — the Demo Wall pulls from
+the Kubernetes API every five seconds. The only way to change the cluster
+state is to change the Git branch. No kubectl apply, no live YAML edits.
+That is GitOps."_
 
 ---
 
-### Beat 2 — Multi-cluster management (Kommander)
+#### Beat 2 — Multi-cluster fleet (Kommander)
+
+**Audience**: Ops | **~2 min**
 
 **Action**: Open **Kommander → Clusters**.
 
@@ -118,53 +141,80 @@ Add a new cluster and it inherits the same policies and add-ons automatically."_
 
 ---
 
-### Beat 3 — Platform add-ons (Kommander)
+#### Beat 3 — Platform add-ons + quotas (Kommander)
 
-**Action**: **Kommander → Applications** (workspace-scoped tab).
+**Audience**: Both | **~2 min**
 
-**What to show**: Istio, Kiali, Jaeger, Grafana — all `Deployed`.
+**Action**: **Kommander → Applications** (workspace-scoped tab), then **Clusters → [workload cluster] → Namespaces → demo-app**.
 
-**What you say**: _"The entire observability stack was deployed by NKP's app
-catalog with a single GitOps commit. No manual Helm installs."_
-
----
-
-### Beat 4 — Resource quotas (Kommander)
-
-**Action**: **Kommander → Clusters → [workload cluster] → Namespaces → demo-app**.
-
-**What to show**: Live quota usage — pods, CPU request, memory.
+**What to show**:
+- Applications: Istio, Kiali, Jaeger, Grafana — all `Deployed`.
+- Namespace view: live quota usage — pods, CPU request, memory.
 
 Terminal side-by-side:
 ```bash
 kubectl describe resourcequota demo-app-quota -n demo-app
-kubectl describe limitrange default-limits -n demo-app
 ```
 
-**What you say**: _"Every team namespace has a hard quota. A rogue deployment
-can't starve the rest of the cluster — the platform enforces guardrails
-automatically."_
+**What you say**: _"The entire observability stack was deployed from NKP's app
+catalog — one GitOps commit, no manual Helm installs. And every team namespace
+has a hard quota baked in. A rogue deployment can't starve the cluster."_
 
 ---
 
-### Beat 5 — RBAC / Access control (Kommander)
+#### Beat 4 — Guardrails: RBAC + Policy (dryrun)
 
-**Action**: **Kommander → Access Control → Roles**.
+**Audience**: Ops | **~3 min**
 
-**What to show**: `dev-role-demo-app` (read-only) vs `ops-role-demo-app` (full).
+**Action**: **Kommander → Access Control → Roles**, then show Gatekeeper constraints.
+
+**What to show**:
+- RBAC roles: `dev-role-demo-app` (read-only) vs `ops-role-demo-app` (full).
+- ArgoCD → `rx-demo` → Resources tab → filter `Constraint`.
+- Demo Wall policy card: compliance %.
 
 Terminal:
 ```bash
 kubectl get roles -n demo-app -o wide
-kubectl get rolebindings -n demo-app -o wide
+kubectl get constraints -A
+
+# Live violation demo (non-blocking dryrun):
+kubectl apply -f platform/policy/examples/policy-violation-example.yaml
+# Watch compliance card drop on Demo Wall
+kubectl -n demo-app delete pod policy-violation-example --ignore-not-found
 ```
 
 **What you say**: _"Developers can observe their workloads but cannot change
-replicas. No one has cluster-admin by default — least-privilege baked in."_
+replicas — least-privilege is baked in. And Gatekeeper audits every object
+continuously. We're in dryrun mode now — the bad pod ran, but it's flagged.
+Later I'll show you what happens when we flip to enforce."_
+
+> **Setup for Act 4**: The audience has now seen the violation pod run in dryrun mode.
+> In Beat 16 you'll apply the same pod under `deny` — and it will be rejected at admission.
 
 ---
 
-### Beat 6 — GitOps in action: start progressive delivery
+**Transition**: _"The platform is ready — quotas, RBAC, policy, observability, all from Git. Now let's ship an application update the GitOps way."_
+
+---
+
+### Act 2 — "Ship It" (~18 min)
+
+*Progressive delivery from first canary to full cutover.*
+
+| Beat | Title | Scenario | Audience | ~Time |
+|------|-------|----------|----------|-------|
+| 5 | Start the canary (10%) | `scenario/canary-10` | Both | 4 min |
+| 6 | Service mesh topology (Kiali) | `scenario/canary-10` | Dev | 4 min |
+| 7 | Distributed traces (Jaeger) | `scenario/canary-10` | Dev | 4 min |
+| 8 | Ramp the canary (50% → 100%) | `canary-50` → `canary-100` | Both | 3 min |
+| 9 | (Optional) Shadow testing — traffic mirroring | `scenario/mirror-v2` | Dev | 3 min |
+
+---
+
+#### Beat 5 — Start the canary (10%)
+
+**Scenario**: `scenario/canary-10` | **Audience**: Both | **~4 min**
 
 **Action**: Switch to `scenario/canary-10` in ArgoCD.
 
@@ -174,13 +224,19 @@ Watch the Demo Wall:
 - Intent shows: _"Progressive delivery — 10% traffic shifted to v2"_
 - Next hint shows: `canary-50`
 
+**Storefront**: Open two browser tabs. Refresh a few times — most loads show the
+blue (v1) theme. Roughly 1 in 10 loads shows the green (v2) theme. Point out the
+color difference to the audience.
+
 **What you say**: _"I changed one line in Git — the branch pointer. ArgoCD
-reconciled 12 Kubernetes resources in under 30 seconds. No downtime, no
-kubectl apply."_
+reconciled 12 Kubernetes resources in under 30 seconds. Ten percent of real
+users are now seeing v2. No downtime, no kubectl apply."_
 
 ---
 
-### Beat 7 — Service mesh topology (Kiali)
+#### Beat 6 — Service mesh topology (Kiali)
+
+**Scenario**: `scenario/canary-10` | **Audience**: Dev | **~4 min**
 
 **Action**: Open **Kiali** (via Kommander SSO or Demo Wall platform link).
 
@@ -194,39 +250,86 @@ service-to-service call in real time."_
 
 ---
 
-### Beat 8 — Ramp the canary
+#### Beat 7 — Distributed traces (Jaeger)
+
+**Scenario**: `scenario/canary-10` | **Audience**: Dev | **~4 min**
+
+**Action**: In the storefront, click **Checkout**. Note the **Last Trace** badge
+in the bag panel. If `JAEGER_QUERY_URL` is configured, click **→ Jaeger** to jump
+directly. Otherwise copy the trace ID and paste into Jaeger search.
+
+**What to show** in Jaeger:
+- Service: `frontend` → Find Traces → open the checkout trace.
+- The span waterfall: `frontend` → `checkout-api` → `payment-mock` (4 services, ~7 spans).
+- Point out: each service added its own span. The trace crossed service boundaries automatically.
+
+**What you say**: _"Every checkout generates a distributed trace across all four
+services. This is how we'll prove v2 is healthy before ramping further — and
+how we'll diagnose problems when things go wrong."_
+
+---
+
+#### Beat 8 — Ramp the canary (50% → 100%)
+
+**Scenario**: `scenario/canary-50` → `scenario/canary-100` | **Audience**: Both | **~3 min**
 
 **Action**: Switch to `scenario/canary-50`, then `scenario/canary-100`.
 
 Watch:
 - Demo Wall traffic card: 50/50 → 0/100
 - Kiali graph updates live
+- Storefront: all loads now show the green (v2) theme
+
+**What you say**: _"Two more branch switches. Fifty-fifty, then full cutover.
+Same workflow every time — Git is the control plane."_
 
 ---
 
-### Beat 9 — Policy governance (Gatekeeper)
+#### Beat 9 — (Optional) Shadow testing with traffic mirroring
 
-**Action (ArgoCD side)**: ArgoCD → `rx-demo` → Resources tab → filter `Constraint`.
-**Action (Demo Wall side)**: Policy card shows compliance %.
+**Scenario**: `scenario/mirror-v2` | **Audience**: Dev | **~3 min**
 
-Terminal:
-```bash
-kubectl get constraints -A
+> Best shown *before* the canary ramp (between Beats 7 and 8) if you want to tell
+> the story chronologically: mirror first, then canary. Works in either position.
 
-# Live violation demo (non-blocking dryrun):
-kubectl apply -f platform/policy/examples/policy-violation-example.yaml
-# Watch compliance card drop on Demo Wall
-kubectl -n demo-app delete pod policy-violation-example --ignore-not-found
-```
+**Action**: Switch to `scenario/mirror-v2` in ArgoCD.
 
-**What you say**: _"Policy is just another Kubernetes resource — it lives in
-Git, not in someone's head. Gatekeeper audits every object continuously. We're
-in dryrun mode today; flip `enforcementAction: deny` and the bad pod is
-rejected at admission."_
+**What to show**:
+- **Demo Wall**: Traffic card shows `v1 / v2 = 100 / 0 (mirror)` — users see only v1.
+- **Kiali**: A dashed "mirror" edge appears from frontend to payment-mock-v2.
+  v2 receives 100% shadow traffic but returns no responses to users.
+- **Jaeger**: Search for service `payment-mock` — v2 traces appear alongside v1.
+  v2 is processing real traffic shapes without any user impact.
+
+**What you say**: _"Traffic mirroring sends a copy of every request to v2 in the
+background. Users see only v1. We can validate v2 under real traffic patterns
+with zero risk — before we even start the canary."_
+
+Return to `scenario/canary-10` (or `scenario/baseline`) when done.
 
 ---
 
-### Beat 10 — Incident drill: inject latency
+**Transition**: _"v2 is validated — traces look clean, canary metrics are green. But what happens when something goes wrong in production?"_
+
+---
+
+### Act 3 — "Break It, Find It, Fix It" (~18 min)
+
+*Incident response — the observability payoff.*
+
+| Beat | Title | Scenario | Audience | ~Time |
+|------|-------|----------|----------|-------|
+| 10 | Inject latency (the slow checkout) | `scenario/incident-latency` | Both | 3 min |
+| 11 | Root cause in Jaeger | `scenario/incident-latency` | Dev | 5 min |
+| 12 | (Optional) Inject errors (the broken checkout) | `scenario/incident-error` | Dev | 4 min |
+| 13 | (Optional) Correlate: traces → logs | `scenario/incident-*` | Dev | 3 min |
+| 14 | Rollback via GitOps | `scenario/baseline` | Both | 3 min |
+
+---
+
+#### Beat 10 — Inject latency (the slow checkout)
+
+**Scenario**: `scenario/incident-latency` | **Audience**: Both | **~3 min**
 
 **Action**: Switch to `scenario/incident-latency`.
 
@@ -234,29 +337,87 @@ Demo Wall shows:
 - Traffic: 90/10 (re-split to canary)
 - Intent: _"Incident drill — v2 injecting 1 s latency, watch Jaeger traces"_
 
-**In the storefront**: Click `Checkout ×3`. Watch the Activity box show
-slower responses. The **Last Trace** badge appears in the bag panel.
+**In the storefront**: Click **Checkout** three times. Watch the Activity box show
+slower responses (~1 s per checkout). The **Last Trace** badge appears in the bag panel.
 
 If `JAEGER_QUERY_URL` is configured: click **→ Jaeger** to jump directly to
 the trace. Otherwise copy the trace ID and paste into Jaeger search.
 
+**What you say**: _"Something is wrong. Checkouts that used to take 200 ms are
+now taking over a second. Let's find out why."_
+
 ---
 
-### Beat 11 — Find the root cause in Jaeger
+#### Beat 11 — Root cause in Jaeger
+
+**Scenario**: `scenario/incident-latency` | **Audience**: Dev | **~5 min**
 
 **Action**: Open **Jaeger** (via Demo Wall link or Kommander SSO).
 
-- Service: `frontend` → Search → open the trace from the checkout.
-- Expand spans: frontend → checkout-api → payment-mock-v2.
-- The payment-mock v2 span shows the 1 s delay highlighted.
+- Service: `frontend` → Find Traces → open the trace from the slow checkout.
+- Expand spans: `frontend` → `checkout-api` → `payment-mock-v2`.
+- The `payment-mock-v2` span shows the 1 s delay — highlighted in the waterfall.
 
-**What you say**: _"Every click in the storefront generates a real distributed
-trace. We pinpointed exactly which service introduced the latency — without
-grepping logs."_
+**What you say**: _"Three clicks: open the trace, expand the spans, find the
+culprit. payment-mock v2 added a full second of latency. We pinpointed the
+exact service and the exact call — without grepping a single log."_
 
 ---
 
-### Beat 12 — Rollback
+#### Beat 12 — (Optional) Inject errors (the broken checkout)
+
+**Scenario**: `scenario/incident-error` | **Audience**: Dev | **~4 min**
+
+**Action**: Switch to `scenario/incident-error`.
+
+Demo Wall shows:
+- Intent: _"Incident drill — v2 returning errors"_
+- Traffic: 90/10
+
+**What to show**:
+- **Storefront**: Click Checkout several times. Most succeed, but roughly 1 in 10
+  returns a failure (5xx from payment-mock-v2).
+- **Kiali**: Red error edges appear on the `payment-mock-v2` service. Error rate
+  percentage is visible on the edge label.
+- **Jaeger**: Filter traces by `error=true` — the failed spans show `payment-mock-v2`
+  returning a 500 status.
+
+**What you say**: _"Different failure mode, same diagnosis workflow. Latency was
+subtle — errors are obvious in Kiali. Both lead you straight to the trace."_
+
+---
+
+#### Beat 13 — (Optional) Correlate: traces → logs
+
+**Scenario**: `scenario/incident-latency` or `scenario/incident-error` | **Audience**: Dev | **~3 min**
+
+> Use whichever incident scenario is still active.
+
+**Action**: Copy a trace ID from the storefront's Last Trace badge (or from Jaeger).
+
+Terminal — grep logs by trace ID:
+```bash
+# Replace <TRACE_ID> with the 32-char hex trace ID
+kubectl -n demo-app logs -l app=payment-mock --tail=100 | grep "<TRACE_ID>"
+```
+
+The matching log line includes `trace_id` and `span_id` fields in the JSON output.
+
+If Grafana Loki is available:
+```
+{namespace="demo-app"} |= "<TRACE_ID>"
+```
+
+**What you say**: _"Every log line carries the trace ID and span ID automatically —
+OpenTelemetry injects them. One trace ID connects the Jaeger waterfall to the
+exact log lines from every service that handled that request. No guessing which
+request failed."_
+
+---
+
+#### Beat 14 — Rollback via GitOps
+
+**Scenario**: `scenario/baseline` | **Audience**: Both | **~3 min**
 
 **Action**: Switch back to `scenario/baseline` in ArgoCD.
 
@@ -264,20 +425,42 @@ grepping logs."_
 - Demo Wall shows Healthy
 - Kiali graph normalises
 
+Terminal — show the audit trail:
+```bash
+git log --oneline -5
+```
+
 **What you say**: _"Rollback is the same operation as the canary deploy — one
-branch change in Git. ArgoCD reconciles in under 30 seconds."_
+branch change in Git. ArgoCD reconciles in under 30 seconds. And look at the
+git log — every change is an auditable commit. Who changed what, when, and why."_
 
 ---
 
-### Beat 13 — End session
-
-**Action**: Switch to `scenario/load-off`.
-
-This stops the load generator. The cluster is idle and safe to leave.
+**Transition**: _"That's the core workflow — ship, observe, diagnose, roll back.
+Now let me show you platform capabilities that go deeper."_
 
 ---
 
-### Beat 14 — (Optional) Quota pressure
+### Act 4 — "Go Deeper" (pick 1–2 tracks, 6–8 min each)
+
+*Choose based on audience. Each track is self-contained.*
+
+---
+
+#### Track A — Guardrails & Compliance (Ops / Security audience)
+
+*Narrative: "In Act 1 we saw guardrails in audit mode. Now let's flip them to enforce."*
+
+| Beat | Title | Scenario | ~Time |
+|------|-------|----------|-------|
+| 15 | Quota enforcement | `scenario/quota-pressure` | 3 min |
+| 16 | Policy enforcement (deny mode) | `scenario/policy-enforce` | 3 min |
+
+---
+
+##### Beat 15 — Quota enforcement
+
+**Scenario**: `scenario/quota-pressure` | **~3 min**
 
 **Action**: Switch to `scenario/quota-pressure` in ArgoCD.
 
@@ -305,7 +488,12 @@ Return to baseline when done.
 
 ---
 
-### Beat 15 — (Optional) Policy enforcement: Gatekeeper deny mode
+##### Beat 16 — Policy enforcement: Gatekeeper deny mode
+
+**Scenario**: `scenario/policy-enforce` | **~3 min**
+
+> **Callback to Act 1**: In Beat 4 the same violation pod ran successfully under dryrun.
+> Now Gatekeeper is in deny mode — the pod will be rejected at admission.
 
 **Action**: Switch to `scenario/policy-enforce` in ArgoCD.
 
@@ -314,30 +502,99 @@ What changes:
 - Demo Wall policy card stays green (existing workloads are compliant)
 - ArgoCD shows the constraint as `Synced / Healthy`
 
-Now apply the violation example:
+Now apply the same violation pod from Act 1:
 ```bash
 kubectl apply -f platform/policy/examples/policy-violation-example.yaml
 ```
 
-The pod is **rejected at admission** — unlike Beat 9 (dryrun), this one never starts:
+The pod is **rejected at admission** — unlike Beat 4 (dryrun), this one never starts:
 ```
-Error from server ([demo-required-labels] label 'app' is required): ...
+Error from server ([demo-required-labels] label 'version' is required): ...
 ```
 
-Show the error message to the audience. Then clean up and confirm nothing changed:
+Show the error message to the audience. Then confirm nothing was created:
 ```bash
 kubectl -n demo-app get pods | grep policy-violation  # nothing
 ```
 
-**What you say**: _"That pod never existed. Gatekeeper intercepted the API call before Kubernetes even
-scheduled it. One line in Git — `enforcementAction: deny` — is the difference between audit and enforcement.
-The policy is the same; the action changed."_
+**What you say**: _"Same pod, same policy, different action. In Act 1 the pod
+ran and was flagged. Now it's rejected before Kubernetes even schedules it.
+One line in Git — `enforcementAction: deny` — is the difference between audit
+and enforcement."_
 
 Return to baseline when done.
 
 ---
 
-### Beat 16 — (Optional) Autoscaling with KEDA
+#### Track B — Resilience & Autoscaling (Infra / Platform audience)
+
+*Narrative: "The platform handles failures and scaling automatically."*
+
+| Beat | Title | Scenario | ~Time |
+|------|-------|----------|-------|
+| 17 | Node failure resilience | `scenario/node-failure` | 4 min |
+| 18 | KEDA autoscaling (scale to zero) | `scenario/keda-checkout` | 4 min |
+
+---
+
+##### Beat 17 — Node failure resilience
+
+**Scenario**: `scenario/node-failure` | **~4 min**
+
+> Demonstrates Kubernetes pod rescheduling and PodDisruptionBudgets when a worker node is removed.
+
+**Action**: Switch to `scenario/node-failure` in ArgoCD.
+
+What changes:
+- All v1 services run **2 replicas** with pod anti-affinity (spread across nodes)
+- PodDisruptionBudgets (`minAvailable: 1`) protect every service
+- Demo Wall **Node Health** card shows node status; pod placement sub-rows appear under workloads
+
+```bash
+# Before the demo: verify pods are spread across nodes
+kubectl -n demo-app get pods -o wide
+```
+
+Now simulate the failure — in **NKP Console → Clusters → [workload cluster] → Machines**, delete one worker node (or cordon it from the terminal):
+
+```bash
+# Option A: cordon + drain (non-destructive, reversible)
+NODE=$(kubectl get nodes -l node-role.kubernetes.io/control-plane!= -o jsonpath='{.items[0].metadata.name}')
+kubectl cordon "$NODE"
+kubectl drain "$NODE" --ignore-daemonsets --delete-emptydir-data
+
+# Option B: delete via NKP console (CAPI will auto-replace the node)
+```
+
+Watch the Demo Wall:
+- Node Health card flips one node to **NotReady**
+- Pods on the drained node go `Pending`, then reschedule to surviving nodes
+- PDBs ensure at least 1 replica stays `Running` throughout the disruption
+
+```bash
+# Watch rescheduling in real time
+kubectl -n demo-app get pods -o wide -w
+```
+
+**What you say**: _"I just killed a worker node. Kubernetes noticed within seconds, evicted the pods,
+and rescheduled them to healthy nodes — all while the PodDisruptionBudget ensured no service went to
+zero replicas. The storefront stayed up the entire time."_
+
+If using NKP CAPI: _"Meanwhile, NKP's Cluster API is already provisioning a replacement node. In a few
+minutes the cluster will be back to full capacity — no ops ticket, no manual intervention."_
+
+Uncordon when done (if using Option A):
+```bash
+kubectl uncordon "$NODE"
+```
+
+Return to baseline when done.
+
+---
+
+##### Beat 18 — KEDA autoscaling (scale to zero)
+
+**Scenario**: `scenario/keda-checkout` | **~4 min**
 
 > Requires KEDA pre-installed (`platform/keda/` applied, or bootstrap with `--branch scenario/keda-checkout`).
 
@@ -374,22 +631,47 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 
 ---
 
+### Closing
+
+#### Beat 19 — End session
+
+**Action**: Switch to `scenario/load-off`.
+
+This stops the load generator. The cluster is idle and safe to leave.
+
+> **Always end on `scenario/load-off`** — never leave load running after a demo session.
+
+---
+
+### 3.5. Recommended run paths
+
+| Audience | ~Time | Beats | Focus |
+|----------|-------|-------|-------|
+| **Exec briefing** | 25 min | 1–6, 8, 10–11, 14, 19 | GitOps + incident story (skip deep observability) |
+| **Developer team** | 45 min | 1–14, 19 | Full observability deep dive incl. traces, mirroring, log correlation |
+| **Ops / Platform team** | 45 min | 1–6, 8, 10–11, 14–16, 19 | Core flow + guardrails & compliance (Track A) |
+| **Infra / SRE team** | 45 min | 1–6, 8, 10–11, 14, 17–19 | Core flow + resilience & autoscaling (Track B) |
+| **Full showcase** | 60 min | All beats (1–19) | Everything — both tracks |
+
+---
+
 ## 4. Scenario reference
 
-| Branch | What it does | Intent (shown in Demo Wall) | Logical next |
-|---|---|---|---|
-| `scenario/baseline` | Normal app, all v1, baseline load | Stable baseline — 100% traffic to v1 | `canary-10` |
-| `scenario/load-off` | Normal app, load disabled | Load off — cluster at rest | `baseline` |
-| `scenario/load-peak` | Normal app, high load | Peak load — stress-testing v1 capacity | `baseline` |
-| `scenario/canary-10` | 90/10 split, baseline load | Progressive delivery — 10% to v2 | `canary-50` |
-| `scenario/canary-50` | 50/50 split, baseline load | Progressive delivery — 50/50 split | `canary-100` |
-| `scenario/canary-100` | 0/100 full cutover | Full cutover — 100% traffic on v2 | `incident-latency` |
-| `scenario/incident-latency` | v2 adds 1 s latency, 90/10 | Incident drill — v2 injecting latency | `incident-error` |
-| `scenario/incident-error` | v2 returns 10% errors, 90/10 | Incident drill — v2 returning errors | `baseline` |
-| `scenario/mirror-v2` | Mirror all traffic to v2 silently | Traffic mirroring | `baseline` |
-| `scenario/keda-checkout` | KEDA scales checkout-api to zero | Autoscaling — scale to zero | `baseline` |
-| `scenario/quota-pressure` | 20 pause-pods fill ~75% pod quota | Quota pressure — guardrails active | `baseline` |
-| `scenario/policy-enforce` | Gatekeeper deny on required-labels | Policy enforcement — deny mode | `baseline` |
+| Branch | What it does | Intent (shown in Demo Wall) | Used in | Logical next |
+|---|---|---|---|---|
+| `scenario/baseline` | Normal app, all v1, baseline load | Stable baseline — 100% traffic to v1 | Beats 1–4, 14 | `canary-10` |
+| `scenario/load-off` | Normal app, load disabled | Load off — cluster at rest | Beat 19 | `baseline` |
+| `scenario/load-peak` | Normal app, high load | Peak load — stress-testing v1 capacity | (ad-hoc) | `baseline` |
+| `scenario/canary-10` | 90/10 split, baseline load | Progressive delivery — 10% to v2 | Beats 5–7 | `canary-50` |
+| `scenario/canary-50` | 50/50 split, baseline load | Progressive delivery — 50/50 split | Beat 8 | `canary-100` |
+| `scenario/canary-100` | 0/100 full cutover | Full cutover — 100% traffic on v2 | Beat 8 | `incident-latency` |
+| `scenario/incident-latency` | v2 adds 1 s latency, 90/10 | Incident drill — v2 injecting latency | Beats 10–11, 13 | `incident-error` |
+| `scenario/incident-error` | v2 returns 10% errors, 90/10 | Incident drill — v2 returning errors | Beat 12 | `baseline` |
+| `scenario/mirror-v2` | Mirror all traffic to v2 silently | Traffic mirroring — shadow v2 | Beat 9 | `canary-10` |
+| `scenario/keda-checkout` | KEDA scales checkout-api to zero | Autoscaling — scale to zero | Beat 18 | `baseline` |
+| `scenario/quota-pressure` | 20 pause-pods fill ~75% pod quota | Quota pressure — guardrails active | Beat 15 | `baseline` |
+| `scenario/policy-enforce` | Gatekeeper deny on required-labels | Policy enforcement — deny mode | Beat 16 | `baseline` |
+| `scenario/node-failure` | 2-replica HA + PDBs, baseline load | Node resilience — evict & reschedule | Beat 17 | `baseline` |
 
 ---
 
