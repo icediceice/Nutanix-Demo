@@ -61,9 +61,18 @@ discover_server() {
     return 0
   fi
 
-  # Known/common Prometheus service names and namespaces (prefer Kommander default workspace).
-  local -a preferred=(
-    "kommander-default-workspace kube-prometheus-stack-prometheus"
+  # Known/common Prometheus service names and namespaces.
+  # Auto-detect the NKP workspace namespace first (label-based).
+  local ws_ns
+  ws_ns="$(kc get ns -l workspaces.kommander.mesosphere.io/workspace-name \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+
+  local -a preferred=()
+  if [[ -n "${ws_ns}" ]]; then
+    preferred+=("${ws_ns} kube-prometheus-stack-prometheus")
+  fi
+  preferred+=(
+    "kommander kube-prometheus-stack-prometheus"
     "monitoring kube-prometheus-stack-prometheus"
     "monitoring prometheus-kube-prometheus-prometheus"
     "monitoring prometheus-operated"
