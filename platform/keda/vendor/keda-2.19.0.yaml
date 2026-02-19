@@ -948,6 +948,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.20.0
+    # ScaledJob CRD embeds full PodSpec schema (>256 KiB). Client-side apply
+    # exceeds the annotation size limit; server-side apply is required.
+    argocd.argoproj.io/sync-options: ServerSideApply=true
   labels:
     app.kubernetes.io/part-of: keda-operator
     app.kubernetes.io/version: 2.19.0
