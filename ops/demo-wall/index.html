@@ -195,6 +195,14 @@
     .status-dot.warn { background: var(--warn); box-shadow: 0 0 4px var(--warn); }
     .status-dot.bad  { background: var(--bad);  box-shadow: 0 0 4px var(--bad); }
 
+    /* ── Pod placement sub-rows ── */
+    .pod-rows   { padding-left: 16px; }
+    .pod-row    { display: flex; gap: 6px; align-items: center;
+                  padding: 2px 0; font-size: .7rem; color: var(--muted); }
+    .pod-name   { font-family: monospace; flex: 1; }
+    .pod-node   { color: var(--accent); font-family: monospace; }
+    .pod-phase  { font-size: .65rem; }
+
     /* ── Next-branch button ── */
     .next-btn {
       display: inline-flex; align-items: center; gap: 5px;
@@ -339,6 +347,13 @@
           <div class="card-sub" id="kedaSub">-</div>
         </div>
 
+        <!-- Node Health (always visible) -->
+        <div class="card" id="nodeCard">
+          <div class="card-label">Node Health</div>
+          <div class="card-value" id="nodeValue">-</div>
+          <div class="card-sub"  id="nodeSub"></div>
+        </div>
+
       </div>
     </section>
 
@@ -425,7 +440,7 @@
       });
     }
 
-    function renderWorkloads(items) {
+    function renderWorkloads(items, podMap) {
       const list = document.getElementById("workloadList");
       if (!list) return;
       list.innerHTML = "";
@@ -448,6 +463,23 @@
         row.appendChild(count);
 
         list.appendChild(row);
+
+        const pods = (podMap || {})[w.name] || [];
+        if (pods.length) {
+          const podDiv = document.createElement("div");
+          podDiv.className = "pod-rows";
+          pods.forEach(function(p) {
+            const pr = document.createElement("div");
+            pr.className = "pod-row";
+            pr.innerHTML =
+              '<span class="status-dot ' + p.status + '" style="width:6px;height:6px"></span>' +
+              '<span class="pod-name">' + p.name + '</span>' +
+              '<span class="pod-node">' + (p.node || "?") + '</span>' +
+              '<span class="pod-phase ' + p.status + '">' + p.phase + '</span>';
+            podDiv.appendChild(pr);
+          });
+          list.appendChild(podDiv);
+        }
       });
     }
 
@@ -562,8 +594,21 @@
         }
       }
 
+      // ── Node Health ──
+      const nd = data.nodes || {};
+      const nvEl = document.getElementById("nodeValue");
+      if (nvEl && nd.total != null) {
+        nvEl.textContent = nd.ready + " / " + nd.total + " Ready";
+        nvEl.className = "card-value " + cls(nd.status);
+      }
+      const nsEl = document.getElementById("nodeSub");
+      if (nsEl) {
+        const notReady = (nd.nodes || []).filter(function(n) { return !n.ready; }).map(function(n) { return n.name; });
+        nsEl.textContent = notReady.length ? "NotReady: " + notReady.join(", ") : "All nodes healthy";
+      }
+
       renderWatch((data.cd || {}).watch || []);
-      renderWorkloads(data.workloads || []);
+      renderWorkloads(data.workloads || [], data.pods || {});
       document.getElementById("error").textContent = "";
     }
 
