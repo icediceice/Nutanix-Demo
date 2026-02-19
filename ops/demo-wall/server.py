@@ -17,7 +17,6 @@ SCENARIO_META = {
         "watch": [
             {"text": "ArgoCD: Synced + Healthy (both green)",       "tool": "ArgoCD"},
             {"text": "Traffic: 100% v1 · loadgen baseline active"},
-            {"text": "Policy: dryrun · 0 violations expected"},
         ],
     },
     "scenario/load-off": {
@@ -1033,6 +1032,7 @@ def build_payload():
             "compliance": compliance,
             "status": policy_status,
             "enforcing": target_rev == "scenario/policy-enforce",
+            "argoUrl": next((l["url"] for l in links if l["name"] == "ArgoCD" and l.get("url")), ""),
         },
         "kpi": [
             {"name": "CD Success Rate", "value": f"{cd_rate}%", "status": "good" if cd_ok else "warn", "threshold": "Synced+Healthy"},
