@@ -95,33 +95,23 @@
     .pill-ready   { background: rgba(175,209,53,.15);  color: var(--good);  border: 1px solid rgba(175,209,53,.35); }
     .pill-pending { background: rgba(245,166,35,.10);  color: var(--warn);  border: 1px solid rgba(245,166,35,.35); }
     .pill-local   { background: rgba(0,145,218,.10);   color: var(--nx-blue); border: 1px solid rgba(0,145,218,.3); }
-    .cred-field {
-      display: flex; align-items: center; gap: 6px; min-width: 140px;
-    }
     .cred-val {
       font-family: monospace; font-size: .82rem;
       background: #0a1522; border: 1px solid #23374f;
       border-radius: 5px; padding: 3px 8px;
-      color: #bfd2ec; flex: 1; word-break: break-all;
+      color: #bfd2ec; word-break: break-all; user-select: all;
     }
-    .copy-btn {
-      background: none; border: 1px solid var(--line); border-radius: 5px;
-      color: var(--muted); cursor: pointer; font-size: .7rem; padding: 3px 7px;
-      white-space: nowrap; transition: background .15s, color .15s;
-    }
-    .copy-btn:hover  { background: rgba(0,145,218,.15); color: var(--nx-blue); border-color: rgba(0,145,218,.5); }
-    .copy-btn.copied { background: rgba(175,209,53,.15); color: var(--good);  border-color: rgba(175,209,53,.4); }
     .dash { color: var(--muted); }
 
     /* ── Port-forward commands ── */
     .cmd-list { display: flex; flex-direction: column; gap: 8px; }
-    .cmd-row { display: grid; grid-template-columns: 90px 1fr auto; gap: 10px; align-items: center; }
+    .cmd-row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: center; }
     .cmd-label { font-size: .72rem; font-weight: 600; color: var(--muted); }
     .cmd-box {
       font-family: monospace; font-size: .75rem; color: #bfd2ec;
       background: #0a1522; border: 1px solid #23374f;
       border-radius: 7px; padding: 7px 10px;
-      white-space: pre-wrap; word-break: break-all;
+      white-space: pre-wrap; word-break: break-all; user-select: all;
     }
 
     /* ── Scenario table ── */
@@ -262,9 +252,6 @@
       <div class="cmd-box" id="switchCmd">kubectl -n argocd patch application rx-demo --type merge \
   -p '{"spec":{"source":{"targetRevision":"scenario/BRANCH"}}}'
 kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite</div>
-      <div style="margin-top:8px;">
-        <button class="copy-btn" onclick="copyText(document.getElementById('switchCmd').textContent, this)">Copy</button>
-      </div>
     </section>
 
     <!-- Scenario reference table -->
@@ -356,40 +343,6 @@ kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
   </div>
 
   <script>
-    function copyText(text, btn) {
-      var value = (text || "").trim();
-
-      function execFallback() {
-        var ta = document.createElement("textarea");
-        ta.value = value;
-        ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
-        var ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        return ok;
-      }
-
-      function flash(ok) {
-        if (!ok) return;
-        var orig = btn.textContent;
-        btn.textContent = "Copied!"; btn.classList.add("copied");
-        setTimeout(function() { btn.textContent = orig; btn.classList.remove("copied"); }, 1800);
-      }
-
-      // HTTP: go straight to execFallback() synchronously — still inside the
-      // click handler so the user gesture is live and execCommand works.
-      // HTTPS: use async clipboard API with sync fallback on rejection.
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(value).then(
-          function() { flash(true); },
-          function() { flash(execFallback()); }
-        );
-      } else {
-        flash(execFallback());
-      }
-    }
-
     function safe(v) { return (v == null || v === "") ? null : String(v); }
 
     function pillClass(status) {
@@ -427,27 +380,17 @@ kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
         // Username
         const tdUser = document.createElement("td");
         const uname = safe(link.username);
-        if (uname) {
-          tdUser.innerHTML = `<div class="cred-field">
-            <span class="cred-val">${uname}</span>
-            <button class="copy-btn" onclick="copyText('${uname.replace(/'/g,"\\'").replace(/"/g,"&quot;")}',this)">Copy</button>
-          </div>`;
-        } else {
-          tdUser.innerHTML = `<span class="dash">—</span>`;
-        }
+        tdUser.innerHTML = uname
+          ? `<span class="cred-val">${uname}</span>`
+          : `<span class="dash">—</span>`;
         tr.appendChild(tdUser);
 
         // Password
         const tdPass = document.createElement("td");
         const pwd = safe(link.password);
-        if (pwd) {
-          tdPass.innerHTML = `<div class="cred-field">
-            <span class="cred-val">${pwd}</span>
-            <button class="copy-btn" onclick="copyText(this.closest('.cred-field').querySelector('.cred-val').textContent,this)">Copy</button>
-          </div>`;
-        } else {
-          tdPass.innerHTML = `<span class="dash">—</span>`;
-        }
+        tdPass.innerHTML = pwd
+          ? `<span class="cred-val">${pwd}</span>`
+          : `<span class="dash">—</span>`;
         tr.appendChild(tdPass);
 
         tbody.appendChild(tr);
@@ -460,7 +403,6 @@ kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
           row.innerHTML = `
             <span class="cmd-label">${link.name || ""}</span>
             <pre class="cmd-box">${link.command}</pre>
-            <button class="copy-btn" onclick="copyText(this.previousElementSibling.textContent,this)">Copy</button>
           `;
           pfList.appendChild(row);
         }

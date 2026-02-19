@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/icediceice/otel-shop-lite-frontend:v2-story-20260219d # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
+          image: ghcr.io/icediceice/otel-shop-lite-frontend:v2-story-20260219f # {"$imagepolicy": "flux-system:otel-shop-frontend-policy"}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
