@@ -18,6 +18,47 @@ pending, and decisions made. Update it at the end of every work block.
 
 ## Session log
 
+### Session 11
+
+**Implemented:**
+- ✅ **ArgoCD sync failure fix** — removed `platform/kommander-apps/` from kustomization (namespace `kommander-default-workspace` didn't exist; real workspace is `demo-7ss5t-64cst`)
+- ✅ **CI namespace validation** — `.github/workflows/ci.yaml` now parses kustomize render and flags references to non-existent namespaces
+- ✅ **Preflight namespace cross-check** — `scripts/preflight.sh` validates kustomize-rendered namespaces against live cluster
+- ✅ **Demo Wall workspace NS auto-discovery** — `ops/demo-wall/server.py` discovers workspace namespace via label `workspaces.kommander.mesosphere.io/workspace-name` instead of hardcoding `kommander-default-workspace`
+- ✅ **Demo Wall RBAC fix** — added `namespaces` to `ops/demo-wall/rbac.yaml` ClusterRole for workspace discovery
+- ✅ **Quick Reference links fixed** — Kiali, Jaeger, Grafana, Kommander now resolve dynamically; Kiali shows honest "not deployed" status when service is absent
+- ✅ **Jaeger traces fix (permanent)** — converted `otel-shop-config` from static ConfigMap to `configMapGenerator` with hash suffix; pods now auto-restart on endpoint changes
+- ✅ **Python fallback fix** — `shared_app.py` default endpoint updated from stale `kommander` to correct `istio-system`
+- ✅ **Bootstrap workspace auto-detection** — `scripts/bootstrap-demo.sh` auto-detects workspace namespace via label selector instead of hardcoding
+- ✅ **Jaeger endpoint discovery** — `bootstrap-demo.sh` probes cluster for Jaeger collector service; warns if Git endpoint doesn't match
+- ✅ **Preflight platform app checks** — `scripts/preflight.sh` now verifies Kiali, Jaeger, and Grafana services exist with pod readiness
+- ✅ **Prometheus discovery fix** — `scripts/discover-prometheus.sh` auto-detects workspace namespace for Prometheus lookup
+- ✅ **Docs cherry-pick** — `docs/Get-On-Event-Track.md` and restructured `DEMO-GUIDE.md` propagated to all 13 scenario branches
+
+**Files changed:**
+- `platform/kustomization.yaml` — removed `kommander-apps` resource
+- `.github/workflows/ci.yaml` — namespace validation step
+- `scripts/preflight.sh` — namespace cross-check + Kiali/Jaeger/Grafana health checks
+- `scripts/bootstrap-demo.sh` — workspace NS auto-detection + Jaeger discovery
+- `scripts/discover-prometheus.sh` — workspace NS auto-detection
+- `ops/demo-wall/server.py` — workspace NS discovery, Kiali guard, Grafana fallback
+- `ops/demo-wall/quickref.html` — removed hardcoded namespace references
+- `ops/demo-wall/rbac.yaml` — added `namespaces` permission
+- `apps/otel-shop-lite/base/kustomization.yaml` — `configMapGenerator` replaces static ConfigMap
+- `apps/otel-shop-lite/base/configmap.yaml` — **deleted** (data now in kustomization.yaml)
+- `apps/otel-shop-lite/src/shared_app.py` — fixed stale fallback endpoint
+- `apps/otel-shop-lite/overlays/keda-checkout/keda-prometheus-configmap.yaml` — updated comment
+
+**Commits:**
+- `16f02c4` on main — fix: remove kommander-apps from platform kustomization
+- `eb6940a` on main — feat: auto-detect namespace mismatches in CI and preflight
+- `9472220` on main — fix: auto-discover NKP workspace namespace in demo-wall
+- `159063c` on main — fix: add namespaces list permission to demo-wall ClusterRole
+- `ed66ed5` on main — fix: auto-detect Jaeger endpoint + configMapGenerator for auto-restart
+- All cherry-picked to 13 scenario branches
+
+---
+
 ### Session 10
 
 **Implemented:**
