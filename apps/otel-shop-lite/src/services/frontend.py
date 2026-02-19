@@ -390,21 +390,18 @@ def _render_frontend(version: str) -> tuple[str, str]:
     }
     body.v1 .trace-badge-label { color: var(--v1-muted); }
     body.v2 .trace-badge-label { color: var(--v2-muted); }
-    .trace-link {
-      display: flex; align-items: center; justify-content: space-between;
-      font-family: "Rubik", sans-serif; font-size: 0.72rem;
-      letter-spacing: 0.02em; color: var(--nx-blue);
-      text-decoration: none;
+    .trace-id {
+      display: block; font-family: monospace; font-size: 0.68rem;
+      word-break: break-all; overflow-wrap: break-word;
+      user-select: all; cursor: text; letter-spacing: 0.02em;
     }
-    .trace-link:hover { text-decoration: underline; }
-    .trace-copy {
-      display: flex; align-items: center; justify-content: space-between;
-      font-family: "Rubik", sans-serif; font-size: 0.72rem;
-      letter-spacing: 0.02em; cursor: pointer;
+    body.v1 .trace-id { color: var(--v1-muted); }
+    body.v2 .trace-id { color: var(--v2-muted); }
+    .trace-jaeger {
+      display: block; font-size: 0.64rem; margin-top: 4px;
+      opacity: 0.7; color: var(--nx-blue); text-decoration: none;
     }
-    body.v1 .trace-copy { color: var(--v1-muted); }
-    body.v2 .trace-copy { color: var(--v2-muted); }
-    .trace-arrow { opacity: 0.7; font-size: 0.78rem; }
+    .trace-jaeger:hover { text-decoration: underline; }
 
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .stat-chip { border-radius: 8px; padding: 10px 12px; text-align: center; }
@@ -654,41 +651,15 @@ def _render_frontend(version: str) -> tuple[str, str]:
       statusEl.className   = "activity-box " + (ok ? "ok" : "fail");
     }
 
-    function copyTrace(el) {
-      var val = el.title;
-      function doExec() {
-        var ta = document.createElement("textarea");
-        ta.value = val;
-        ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(val).catch(doExec);
-      } else {
-        doExec();
-      }
-    }
-
     function showTrace(id) {
       const badge   = document.getElementById("traceBadge");
       const content = document.getElementById("traceContent");
       if (!badge || !content) return;
-      const short = id.slice(0, 16) + "\u2026";
-      if (jaegerUrl) {
-        content.innerHTML =
-          '<a class="trace-link" href="' + jaegerUrl + '/trace/' + id +
-          '" target="_blank" rel="noreferrer">' +
-          '<span>' + short + '</span>' +
-          '<span class="trace-arrow">\u2192 Jaeger</span></a>';
-      } else {
-        content.innerHTML =
-          '<div class="trace-copy" title="' + id + '" ' +
-          'onclick="copyTrace(this)">' +
-          '<span>' + short + '</span>' +
-          '<span class="trace-arrow">\u2398 Copy</span></div>';
-      }
+      const jaegerLink = jaegerUrl
+        ? '<a class="trace-jaeger" href="' + jaegerUrl + '/trace/' + id +
+          '" target="_blank" rel="noreferrer">\u2192 Open in Jaeger</a>'
+        : '';
+      content.innerHTML = '<code class="trace-id">' + id + '</code>' + jaegerLink;
       badge.style.display = "block";
     }
 
@@ -696,10 +667,10 @@ def _render_frontend(version: str) -> tuple[str, str]:
       const item = payload.item || {};
       const recs = (payload.recommendations || []).map(r => r.id).join(", ") || "none";
       productInfoEl.textContent =
-        "sku    " + (item.id   || "n/a") + "\n" +
-        "name   " + (item.name || "n/a") + "\n" +
-        "price  $" + Number(item.price || 0).toFixed(2) + "\n" +
-        "source " + (payload.source || "n/a") + "\n" +
+        "sku    " + (item.id   || "n/a") + "\\n" +
+        "name   " + (item.name || "n/a") + "\\n" +
+        "price  $" + Number(item.price || 0).toFixed(2) + "\\n" +
+        "source " + (payload.source || "n/a") + "\\n" +
         "recs   " + recs;
     }
 
