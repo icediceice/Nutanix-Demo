@@ -654,6 +654,23 @@ def _render_frontend(version: str) -> tuple[str, str]:
       statusEl.className   = "activity-box " + (ok ? "ok" : "fail");
     }
 
+    function copyTrace(el) {
+      var val = el.title;
+      function doExec() {
+        var ta = document.createElement("textarea");
+        ta.value = val;
+        ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(val).catch(doExec);
+      } else {
+        doExec();
+      }
+    }
+
     function showTrace(id) {
       const badge   = document.getElementById("traceBadge");
       const content = document.getElementById("traceContent");
@@ -668,7 +685,7 @@ def _render_frontend(version: str) -> tuple[str, str]:
       } else {
         content.innerHTML =
           '<div class="trace-copy" title="' + id + '" ' +
-          'onclick="navigator.clipboard.writeText(this.title)">' +
+          'onclick="copyTrace(this)">' +
           '<span>' + short + '</span>' +
           '<span class="trace-arrow">\u2398 Copy</span></div>';
       }
