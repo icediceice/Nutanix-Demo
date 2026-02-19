@@ -478,8 +478,15 @@
 
       const healthEl = document.getElementById("cdHealth");
       if (healthEl) {
-        healthEl.textContent = `${safe(cd.sync)} / ${safe(cd.health)}`;
-        healthEl.className = "scenario-health " + cls(cd.health);
+        const withinGrace = _switchTime > 0 && (Date.now() - _switchTime) < 90000;
+        const alreadySynced = cd.sync === "Synced" && cd.health === "Healthy";
+        if (withinGrace && !alreadySynced) {
+          healthEl.textContent = "Syncing\u2026";
+          healthEl.className = "scenario-health warn";
+        } else {
+          healthEl.textContent = safe(cd.sync) + " / " + safe(cd.health);
+          healthEl.className = "scenario-health " + cls(cd.health);
+        }
       }
       const revEl = document.getElementById("cdRevision");
       if (revEl) revEl.textContent = shortSha(cd.revision) !== "-" ? "rev " + shortSha(cd.revision) : "";
@@ -572,6 +579,8 @@
 
     // ── Scenario switching ──────────────────────────────────────────
     let _switchTarget = "";
+    let _switchTime   = 0;         // ms timestamp when last switch was initiated
+    const SWITCH_GRACE_MS = 90000; // suppress transient Missing/OutOfSync for up to 90 s
 
     function handleSwitch(branch) {
       _switchTarget = branch;
@@ -597,6 +606,7 @@
         });
         const data = await res.json();
         if (data.ok) {
+          _switchTime = Date.now();
           showToast("Switching to " + branch + " \u2013 ArgoCD syncing\u2026", "good");
         } else {
           showToast("Switch failed: " + (data.error || "unknown"), "bad");
