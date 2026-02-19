@@ -1,0 +1,47 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend
+      version: v1
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: catalog-api-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: catalog-api
+      version: v1
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: checkout-api-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: checkout-api
+      version: v1
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-mock-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-mock
+      version: v1
