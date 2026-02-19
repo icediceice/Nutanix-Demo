@@ -119,6 +119,15 @@ SCENARIO_META = {
             {"text": "ArgoCD: watch sync status after policy change",        "tool": "ArgoCD"},
         ],
     },
+    "scenario/node-failure": {
+        "intent": "Node resilience — delete a worker node, watch Kubernetes evict & NKP auto-replace",
+        "next": "baseline",
+        "watch": [
+            {"text": "Node Health card: watch a node flip NotReady after NKP deletion", "tool": "Kommander"},
+            {"text": "Workloads: pods on the deleted node show Pending, then reschedule to surviving nodes"},
+            {"text": "NKP CAPI provisions a replacement node and rejoins the cluster", "tool": "Kommander"},
+        ],
+    },
 }
 
 
@@ -844,6 +853,69 @@ def build_workloads():
     return sorted(result, key=lambda x: x["name"])
 
 
+def get_node_status():
+    """Return node readiness summary for the cluster."""
+    import math
+    data = k8s_get_json("/api/v1/nodes")
+    if "_error" in data:
+        return {"total": 0, "ready": 0, "status": "warn", "nodes": []}
+    nodes = []
+    for item in (data.get("items") or []):
+        # Prefer kubernetes.io/hostname label, else first segment of node name.
+        labels = (item.get("metadata") or {}).get("labels") or {}
+        name = labels.get("kubernetes.io/hostname") or (item.get("metadata") or {}).get("name", "?")
+        name = name.split(".")[0]
+        ready = False
+        for cond in ((item.get("status") or {}).get("conditions") or []):
+            if cond.get("type") == "Ready":
+                ready = cond.get("status") == "True"
+                break
+        nodes.append({"name": name, "ready": ready})
+    total = len(nodes)
+    ready_count = sum(1 for n in nodes if n["ready"])
+    if ready_count == total:
+        status = "good"
+    elif ready_count >= math.ceil(total / 2):
+        status = "warn"
+    else:
+        status = "bad"
+    return {"total": total, "ready": ready_count, "status": status, "nodes": nodes}
+
+
+def get_pod_placement():
+    """Return pod-to-node placement for demo-app namespace, grouped by deployment key."""
+    data = k8s_get_json("/api/v1/namespaces/demo-app/pods")
+    if "_error" in data:
+        return {}
+    result = {}
+    for item in (data.get("items") or []):
+        meta   = item.get("metadata") or {}
+        labels = meta.get("labels") or {}
+        app    = labels.get("app", "")
+        ver    = labels.get("version", "")
+        if not app or not ver:
+            continue
+        key      = f"{app}-{ver}"
+        pod_name = meta.get("name", "?")
+        # Compact: "…" + last 5 chars of the random suffix.
+        suffix = pod_name[-5:] if len(pod_name) >= 5 else pod_name
+        short  = f"{key}-\u2026{suffix}"
+        node   = (item.get("spec") or {}).get("nodeName") or ""
+        # Trim node name to hostname label segment.
+        node = node.split(".")[0] if node else ""
+        phase  = (item.get("status") or {}).get("phase", "Unknown")
+        if phase == "Running":
+            pod_status = "good"
+        elif phase in ("Pending", "ContainerCreating"):
+            pod_status = "warn"
+        else:
+            pod_status = "bad"
+        if key not in result:
+            result[key] = []
+        result[key].append({"name": short, "node": node, "phase": phase, "status": pod_status})
+    return result
+
+
 def build_payload():
     # ArgoCD app status
     app = k8s_get_json("/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo")
@@ -899,6 +971,8 @@ def build_payload():
     keda = get_keda_status()
     quota = get_quota_status()
     workloads = build_workloads()
+    nodes = get_node_status()
+    pods = get_pod_placement()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -936,6 +1010,8 @@ def build_payload():
         "keda": keda,
         "quota": quota,
         "workloads": workloads,
+        "nodes": nodes,
+        "pods": pods,
         "links": links,
         "scenarios": [
             {"branch": k, "intent": v["intent"], "next": v.get("next", "")}
