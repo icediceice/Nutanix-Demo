@@ -202,13 +202,31 @@ def _read_secret_b64(namespace: str, name: str, key: str) -> str:
         return ""
 
 
-def _discover_kommander_password() -> str:
+def _discover_workspace_namespace() -> str:
+    """Auto-discover the NKP workspace namespace via its well-known label.
+
+    NKP stamps every workspace namespace with the label
+    ``workspaces.kommander.mesosphere.io/workspace-name``.
+    Falls back to the legacy name so existing configs still work.
+    """
+    data = k8s_get_json(
+        "/api/v1/namespaces"
+        "?labelSelector=workspaces.kommander.mesosphere.io%2Fworkspace-name"
+    )
+    if "_error" not in data:
+        items = data.get("items") or []
+        if items:
+            return items[0]["metadata"]["name"]
+    return "kommander-default-workspace"
+
+
+def _discover_kommander_password(workspace_ns: str = "kommander-default-workspace") -> str:
     """Try known NKP/DKP secret locations for the SSO admin password."""
     candidates = [
-        ("kommander-default-workspace", "dkp-admin-user-password", "password"),
-        ("kommander",                   "dkp-admin-user-password", "password"),
-        ("kommander-default-workspace", "kommander-admin-credentials", "password"),
-        ("kommander",                   "kommander-admin-credentials", "password"),
+        (workspace_ns,  "dkp-admin-user-password",      "password"),
+        ("kommander",   "dkp-admin-user-password",      "password"),
+        (workspace_ns,  "kommander-admin-credentials",  "password"),
+        ("kommander",   "kommander-admin-credentials",  "password"),
     ]
     for ns, sname, skey in candidates:
         val = _read_secret_b64(ns, sname, skey)
@@ -476,6 +494,12 @@ def _build_link(name, url, status, hint="", command="", username="", password=""
 def build_quick_links():
     links = []
 
+    # Auto-discover the actual NKP workspace namespace (e.g. demo-7ss5t-64cst).
+    # This replaces the legacy hardcoded "kommander-default-workspace" which only
+    # matches the default NKP install path and breaks on clusters where Kommander
+    # assigned a different workspace name.
+    workspace_ns = _discover_workspace_namespace()
+
     # Credentials: env vars take precedence; fall back to auto-discovery from cluster secrets.
     argocd_user = os.environ.get("ARGOCD_USERNAME", "admin")
     argocd_pass = (
@@ -485,13 +509,13 @@ def build_quick_links():
     kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "") or "admin"
     kommander_sso_pass = (
         os.environ.get("KOMMANDER_SSO_PASSWORD", "")
-        or _discover_kommander_password()
+        or _discover_kommander_password(workspace_ns)
     )
 
     kommander_ingress_base = ""
     kommander_ingress_probe = ""
     kommander_platform_base = os.environ.get("KOMMANDER_PLATFORM_BASE", "")
-    kommander_traefik = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/services/kommander-traefik")
+    kommander_traefik = k8s_get_json(f"/api/v1/namespaces/{workspace_ns}/services/kommander-traefik")
     if "_error" not in kommander_traefik:
         host = _first_non_empty([
             get_nested(kommander_traefik, ["status", "loadBalancer", "ingress", 0, "hostname"], ""),
@@ -512,7 +536,7 @@ def build_quick_links():
 
     # Preferred discovery path: read the traefik-forward-auth provider-uri (Dex base).
     if not kommander_platform_base:
-        tfa_cfg = k8s_get_json("/api/v1/namespaces/kommander-default-workspace/configmaps/traefik-forward-auth-configmap")
+        tfa_cfg = k8s_get_json(f"/api/v1/namespaces/{workspace_ns}/configmaps/traefik-forward-auth-configmap")
         if "_error" not in tfa_cfg:
             provider_uri = _parse_ini_value(get_nested(tfa_cfg, ["data", "config"], ""), "provider-uri")
             base = _url_base(provider_uri)
@@ -582,45 +606,56 @@ def build_quick_links():
             argocd_pass,
         ))
 
-    # Kiali
-    kiali_ing = f"{kommander_ingress_base}/dkp/kiali" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "kiali")
-    if kiali_ing:
-        links.append(_build_link(
-            "Kiali",
-            kiali_ing,
-            "ready",
-            "Service graph and traffic health (via Kommander ingress + SSO)",
-            username=kommander_sso_user,
-            password=kommander_sso_pass,
-        ))
-    else:
-        kiali = _find_service(
-        namespaces=["istio-system", "kommander-default-workspace", "kommander"],
-        name_tokens=["kiali"],
-        preferred_ports=[20001, 80],
+    # Kiali — only advertise the /dkp/kiali URL if the kiali service actually exists.
+    # The kiali operator may be installed without a Kiali CR, leaving the ingress path
+    # returning 404. Check for the service first to avoid publishing a dead link.
+    _kiali_svc_ns = None
+    for _ns in [workspace_ns, "istio-system"]:
+        _probe = k8s_get_json(f"/api/v1/namespaces/{_ns}/services/kiali")
+        if "_error" not in _probe:
+            _kiali_svc_ns = _ns
+            break
+
+    if _kiali_svc_ns is not None:
+        # Service exists — build URL via ingress base (SSO-authenticated path preferred).
+        kiali_ing = (
+            f"{kommander_ingress_base}/dkp/kiali"
+            if kommander_ingress_base
+            else _ingress_endpoint(workspace_ns, "kiali")
         )
-        if kiali:
-            ns, svc = kiali
-            remote = _service_lb_url(svc, preferred_ports=[20001, 80], default_scheme="http")
-            port = _service_port(svc, preferred_ports=[20001, 80])
+        if kiali_ing:
+            links.append(_build_link(
+                "Kiali",
+                kiali_ing,
+                "ready",
+                "Service graph and traffic health (via Kommander ingress + SSO)",
+                username=kommander_sso_user,
+                password=kommander_sso_pass,
+            ))
+        else:
+            # Ingress not exposed — offer a direct LB URL or port-forward.
+            _kiali_svc_obj = k8s_get_json(f"/api/v1/namespaces/{_kiali_svc_ns}/services/kiali")
+            remote = _service_lb_url(_kiali_svc_obj, preferred_ports=[20001, 80], default_scheme="http")
+            port = _service_port(_kiali_svc_obj, preferred_ports=[20001, 80])
             links.append(_build_link(
                 "Kiali",
                 remote or "http://localhost:20001/",
                 "ready" if remote else "local",
                 "Service graph and traffic health",
-                f"kubectl -n {ns} port-forward svc/{get_nested(svc, ['metadata', 'name'], 'kiali')} 20001:{port or 20001}",
+                f"kubectl -n {_kiali_svc_ns} port-forward svc/kiali 20001:{port or 20001}",
                 kommander_sso_user,
                 kommander_sso_pass,
             ))
-        else:
-            links.append(_build_link(
-                "Kiali",
-                "",
-                "pending",
-                "Waiting for Kiali service",
-                username=kommander_sso_user,
-                password=kommander_sso_pass,
-            ))
+    else:
+        # No kiali service found — operator may be present but no instance deployed.
+        links.append(_build_link(
+            "Kiali",
+            "",
+            "pending",
+            "Kiali operator installed — no Kiali instance deployed yet",
+            username=kommander_sso_user,
+            password=kommander_sso_pass,
+        ))
 
     # Jaeger
     jaeger_ing = f"{kommander_ingress_base}/dkp/jaeger" if kommander_ingress_base else _ingress_endpoint("istio-system", "jaeger-jaeger-operator-jaeger-query")
@@ -635,7 +670,7 @@ def build_quick_links():
         ))
     else:
         jaeger = _find_service(
-        namespaces=["istio-system", "kommander-default-workspace", "kommander"],
+        namespaces=["istio-system", workspace_ns, "kommander"],
         name_tokens=["jaeger", "query"],
         preferred_ports=[16686, 80],
         )
@@ -663,7 +698,7 @@ def build_quick_links():
             ))
 
     # Grafana — use /dkp/grafana (metrics/Prometheus Grafana) not /dkp/logging/grafana (Loki)
-    grafana_ing = f"{kommander_ingress_base}/dkp/grafana" if kommander_ingress_base else _ingress_endpoint("kommander-default-workspace", "grafana-logging")
+    grafana_ing = f"{kommander_ingress_base}/dkp/grafana" if kommander_ingress_base else _ingress_endpoint(workspace_ns, "kube-prometheus-stack-grafana")
     if grafana_ing:
         links.append(_build_link(
             "Grafana",
@@ -675,7 +710,7 @@ def build_quick_links():
         ))
     else:
         grafana = _find_service(
-        namespaces=["kommander-default-workspace", "kommander", "monitoring"],
+        namespaces=[workspace_ns, "kommander", "monitoring"],
         name_tokens=["grafana"],
         preferred_ports=[3000, 80],
         )
@@ -711,7 +746,7 @@ def build_quick_links():
         elif kommander_ingress_base:
             # Fallback to a known-good /dkp entry point on the workload ingress.
             # Root (/) is often not a UI landing page (can map to object store or 404).
-            paths = _list_ingress_paths("kommander-default-workspace")
+            paths = _list_ingress_paths(workspace_ns)
             entry = _pick_platform_entry_path(paths)
             if entry:
                 kommander_url = f"{kommander_ingress_base}{entry}"
