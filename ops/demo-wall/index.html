@@ -195,6 +195,54 @@
     .status-dot.warn { background: var(--warn); box-shadow: 0 0 4px var(--warn); }
     .status-dot.bad  { background: var(--bad);  box-shadow: 0 0 4px var(--bad); }
 
+    /* ── Next-branch button ── */
+    .next-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 10px; padding: 4px 12px;
+      background: rgba(0,145,218,.1); border: 1px solid rgba(0,145,218,.3);
+      border-radius: 999px; color: var(--accent);
+      font-size: .72rem; font-family: "Work Sans", sans-serif;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .next-btn strong { font-weight: 600; }
+    .next-btn:hover  { background: rgba(0,145,218,.22); border-color: rgba(0,145,218,.6); color: #fff; }
+    .next-btn.switching { opacity: .55; cursor: wait; }
+
+    /* ── Switch modal ── */
+    .switch-overlay {
+      position: fixed; inset: 0; background: rgba(0,8,20,.82);
+      z-index: 9999; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .switch-modal-box {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 14px; padding: 24px; max-width: 420px; width: 100%;
+    }
+    .modal-title { font-family: "Sora", sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .modal-target { color: var(--accent); font-family: monospace; font-size: .9rem; }
+    .modal-hint   { margin-top: 6px; font-size: .75rem; color: var(--muted); line-height: 1.5; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .modal-btn {
+      padding: 7px 18px; border-radius: 8px; font-size: .82rem;
+      font-family: "Work Sans", sans-serif; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--line);
+    }
+    .modal-btn-cancel { background: transparent; color: var(--muted); }
+    .modal-btn-cancel:hover { color: var(--ink); border-color: var(--muted); }
+    .modal-btn-ok { background: var(--nx-blue); color: #fff; border-color: var(--nx-blue); }
+    .modal-btn-ok:hover { background: #0082c8; }
+
+    /* ── Switch toast ── */
+    .switch-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 22px; font-size: .85rem; color: var(--ink);
+      z-index: 9998; opacity: 0; transition: opacity .3s; white-space: nowrap;
+      max-width: 90vw; pointer-events: none;
+    }
+    .switch-toast.good { border-color: rgba(175,209,53,.5); color: var(--good); }
+    .switch-toast.bad  { border-color: rgba(255,82,82,.5);  color: var(--bad); }
+
     /* ── Status colours ── */
     .good { color: var(--good); }
     .bad  { color: var(--bad);  }
@@ -317,6 +365,28 @@
     </footer>
   </div>
 
+  <!-- ── One-time switch confirmation modal ── -->
+  <div id="switchModal" class="switch-overlay" style="display:none">
+    <div class="switch-modal-box">
+      <div class="modal-title">Switch Scenario?</div>
+      <div style="font-size:.85rem;color:var(--ink);margin-top:4px;">
+        This will patch ArgoCD <code>targetRevision</code> to<br>
+        <span class="modal-target" id="switchTargetLabel"></span>
+      </div>
+      <div class="modal-hint">
+        ArgoCD will reconcile the new scenario automatically.<br>
+        You won't be asked again this session.
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" id="switchCancel">Cancel</button>
+        <button class="modal-btn modal-btn-ok"     id="switchConfirm">Switch &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Switch feedback toast ── -->
+  <div id="switchToast" class="switch-toast"></div>
+
   <script>
     function cls(v) {
       if (v === "good" || v === "Healthy" || v === "Synced" || v === "ready") return "good";
@@ -393,7 +463,18 @@
       if (intentEl) intentEl.textContent = cd.intent || "";
 
       const nextEl = document.getElementById("scenarioNext");
-      if (nextEl) nextEl.innerHTML = cd.next ? `Next \u2192 <strong>${cd.next}</strong>` : "";
+      if (nextEl) {
+        nextEl.innerHTML = "";
+        if (cd.next) {
+          const fullBranch = "scenario/" + cd.next;
+          const btn = document.createElement("button");
+          btn.className = "next-btn";
+          btn.innerHTML = "Next &rarr; <strong>" + cd.next + "</strong>";
+          btn.title = "Switch ArgoCD to " + fullBranch;
+          btn.addEventListener("click", function() { handleSwitch(fullBranch); });
+          nextEl.appendChild(btn);
+        }
+      }
 
       const healthEl = document.getElementById("cdHealth");
       if (healthEl) {
@@ -488,6 +569,66 @@
         document.getElementById("error").textContent = "Status fetch failed: " + err;
       }
     }
+
+    // ── Scenario switching ──────────────────────────────────────────
+    let _switchTarget = "";
+
+    function handleSwitch(branch) {
+      _switchTarget = branch;
+      // Show the one-time confirmation the first time only (per session).
+      if (!sessionStorage.getItem("dw-switch-confirmed")) {
+        document.getElementById("switchTargetLabel").textContent = branch;
+        document.getElementById("switchModal").style.display = "flex";
+      } else {
+        doSwitch(branch);
+      }
+    }
+
+    async function doSwitch(branch) {
+      document.getElementById("switchModal").style.display = "none";
+      document.querySelectorAll(".next-btn").forEach(b => {
+        b.disabled = true; b.classList.add("switching");
+      });
+      try {
+        const res = await fetch("/api/switch-scenario", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({branch: branch})
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast("Switching to " + branch + " \u2013 ArgoCD syncing\u2026", "good");
+        } else {
+          showToast("Switch failed: " + (data.error || "unknown"), "bad");
+        }
+      } catch (err) {
+        showToast("Switch failed: " + err, "bad");
+      } finally {
+        document.querySelectorAll(".next-btn").forEach(b => {
+          b.disabled = false; b.classList.remove("switching");
+        });
+      }
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById("switchToast");
+      if (!t) return;
+      t.textContent = msg;
+      t.className = "switch-toast" + (type ? " " + type : "");
+      t.style.opacity = "1";
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function() { t.style.opacity = "0"; }, 4500);
+    }
+
+    document.getElementById("switchCancel").addEventListener("click", function() {
+      document.getElementById("switchModal").style.display = "none";
+      _switchTarget = "";
+    });
+    document.getElementById("switchConfirm").addEventListener("click", function() {
+      sessionStorage.setItem("dw-switch-confirmed", "1");
+      doSwitch(_switchTarget);
+    });
+    // ── End scenario switching ──────────────────────────────────────
 
     tick();
     setInterval(tick, 5000);

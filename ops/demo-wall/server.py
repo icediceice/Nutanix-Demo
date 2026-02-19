@@ -151,6 +151,34 @@ def k8s_get_json(path: str):
         return {"_error": f"{type(e).__name__}: {e}"}
 
 
+def _k8s_patch_json(path: str, body: dict):
+    """PATCH a k8s resource with merge-patch+json. Returns parsed JSON or {_error:...}."""
+    host = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
+    port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+    url = f"https://{host}:{port}{path}"
+    token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    ca_path    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    try:
+        with open(token_path, "r", encoding="utf-8") as f:
+            token = f.read().strip()
+        ctx  = ssl.create_default_context(cafile=ca_path)
+        data = json.dumps(body).encode("utf-8")
+        req  = urllib.request.Request(url, data=data, method="PATCH")
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Content-Type",  "application/merge-patch+json")
+        req.add_header("Accept",        "application/json")
+        with urllib.request.urlopen(req, context=ctx, timeout=5) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8")
+        except Exception:
+            err_body = ""
+        return {"_error": f"HTTP {e.code}: {err_body}"}
+    except Exception as e:
+        return {"_error": f"{type(e).__name__}: {e}"}
+
+
 def _read_secret_b64(namespace: str, name: str, key: str) -> str:
     """Read a base64-encoded value from a k8s Secret. Returns '' on any error."""
     secret = k8s_get_json(f"/api/v1/namespaces/{namespace}/secrets/{name}")
@@ -916,6 +944,24 @@ def build_payload():
     }
 
 
+def switch_scenario(branch: str):
+    """Patch ArgoCD Application targetRevision and trigger a hard refresh."""
+    if branch not in SCENARIO_META:
+        return {"ok": False, "error": f"Unknown branch: {branch!r}"}
+    result = _k8s_patch_json(
+        "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo",
+        {"spec": {"source": {"targetRevision": branch}}},
+    )
+    if "_error" in result:
+        return {"ok": False, "error": result["_error"]}
+    # Trigger ArgoCD hard refresh — best-effort, ignore errors
+    _k8s_patch_json(
+        "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo",
+        {"metadata": {"annotations": {"argocd.argoproj.io/refresh": "hard"}}},
+    )
+    return {"ok": True, "branch": branch}
+
+
 def serve(port: int):
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -968,6 +1014,26 @@ def serve(port: int):
                 return
 
             self.send_response(404)
+            self.end_headers()
+
+        def do_POST(self):
+            if self.path == "/api/switch-scenario":
+                length = int(self.headers.get("Content-Length", 0) or 0)
+                raw = self.rfile.read(length) if length > 0 else b"{}"
+                try:
+                    req_data = json.loads(raw.decode("utf-8"))
+                except Exception:
+                    req_data = {}
+                branch = str(req_data.get("branch", ""))
+                result = switch_scenario(branch)
+                data = json.dumps(result, separators=(",", ":")).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            self.send_response(405)
             self.end_headers()
 
         def log_message(self, fmt, *args):
