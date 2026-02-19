@@ -68,6 +68,65 @@ else
 fi
 
 echo
+echo "NKP Platform Apps (Kiali / Jaeger / Grafana):"
+# Auto-detect workspace namespace.
+WORKSPACE_NS="$("$KUBECTL" get ns -l workspaces.kommander.mesosphere.io/workspace-name \
+  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+if [[ -n "$WORKSPACE_NS" ]]; then
+  echo "workspace namespace: ${WORKSPACE_NS}"
+else
+  WORKSPACE_NS="kommander-default-workspace"
+  warn "could not auto-detect workspace namespace; checking '${WORKSPACE_NS}'"
+fi
+
+# Jaeger collector — needed for OTEL traces.
+jaeger_ok=0
+for svc_name in jaeger-jaeger-operator-jaeger-collector jaeger-collector; do
+  for ns in istio-system "$WORKSPACE_NS"; do
+    if "$KUBECTL" get svc "$svc_name" -n "$ns" >/dev/null 2>&1; then
+      echo "Jaeger collector: ${svc_name}.${ns} (ready)"
+      jaeger_ok=1
+      break 2
+    fi
+  done
+done
+if [[ "$jaeger_ok" -eq 0 ]]; then
+  warn "Jaeger collector service not found. Traces will be dropped. Deploy Jaeger via Kommander or check the workspace namespace."
+fi
+
+# Kiali — optional but expected for mesh visualization.
+kiali_ok=0
+for ns in "$WORKSPACE_NS" istio-system; do
+  if "$KUBECTL" get svc kiali -n "$ns" >/dev/null 2>&1; then
+    # Verify pod is actually running.
+    kiali_ready="$("$KUBECTL" get pod -n "$ns" -l app.kubernetes.io/name=kiali -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)"
+    if [[ "$kiali_ready" == "True" ]]; then
+      echo "Kiali: ${ns} (ready)"
+    else
+      warn "Kiali service exists in ${ns} but pod is not Ready"
+    fi
+    kiali_ok=1
+    break
+  fi
+done
+if [[ "$kiali_ok" -eq 0 ]]; then
+  warn "Kiali service not found. Mesh visualization will be unavailable. Deploy Kiali via Kommander."
+fi
+
+# Grafana.
+grafana_ok=0
+for svc_name in kube-prometheus-stack-grafana grafana; do
+  if "$KUBECTL" get svc "$svc_name" -n "$WORKSPACE_NS" >/dev/null 2>&1; then
+    echo "Grafana: ${svc_name}.${WORKSPACE_NS} (ready)"
+    grafana_ok=1
+    break
+  fi
+done
+if [[ "$grafana_ok" -eq 0 ]]; then
+  warn "Grafana service not found in ${WORKSPACE_NS}. Dashboards will be unavailable."
+fi
+
+echo
 echo "Demo Namespaces:"
 for ns in demo-app demo-ops; do
   if ! "$KUBECTL" get ns "$ns" >/dev/null 2>&1; then
