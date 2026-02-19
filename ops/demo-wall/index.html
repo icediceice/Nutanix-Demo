@@ -550,7 +550,18 @@
       const psEl = document.getElementById("policySub");
       if (psEl) {
         const v = Number(policy.warn || 0);
-        psEl.textContent = v > 0 ? `${v} violation${v > 1 ? "s" : ""}` : "No violations";
+        const argoUrl = policy.argoUrl || "";
+        if (v > 0 && argoUrl) {
+          psEl.innerHTML = "";
+          const a = document.createElement("a");
+          a.href = argoUrl + "/applications/argocd/rx-demo";
+          a.target = "_blank"; a.rel = "noreferrer";
+          a.textContent = v + " violation" + (v > 1 ? "s" : "");
+          a.style.color = "var(--warn)"; a.style.textDecoration = "underline";
+          psEl.appendChild(a);
+        } else {
+          psEl.textContent = v > 0 ? `${v} violation${v > 1 ? "s" : ""}` : "No violations";
+        }
       }
 
       // ── Quota ──
