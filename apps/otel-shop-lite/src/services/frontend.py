@@ -668,7 +668,7 @@ def _render_frontend(version: str) -> tuple[str, str]:
       } else {
         content.innerHTML =
           '<div class="trace-copy" title="' + id + '" ' +
-          'onclick="navigator.clipboard.writeText(\'' + id + '\')">' +
+          'onclick="navigator.clipboard.writeText(this.title)">' +
           '<span>' + short + '</span>' +
           '<span class="trace-arrow">\u2398 Copy</span></div>';
       }

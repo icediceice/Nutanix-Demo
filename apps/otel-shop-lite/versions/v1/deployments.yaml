@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/icediceice/otel-shop-lite-frontend:v1-story-20260219
+          image: ghcr.io/icediceice/otel-shop-lite-frontend:v1-story-20260219b
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
