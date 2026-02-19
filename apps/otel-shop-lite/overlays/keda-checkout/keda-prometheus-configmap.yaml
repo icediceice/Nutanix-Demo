@@ -4,7 +4,7 @@ metadata:
   name: keda-prometheus
   namespace: demo-app
 data:
-  # Update this to point at your in-cluster Prometheus (or a Thanos query frontend).
-  # KEDA Prometheus scaler expects an HTTP endpoint it can query.
-  serverAddress: http://kube-prometheus-stack-prometheus.kommander-default-workspace.svc.cluster.local:9090
-
+  # Prometheus lives in the NKP workspace namespace, which varies per cluster.
+  # Run bootstrap-demo.sh --discover-prometheus to auto-detect and patch this value.
+  # Fallback: discover-prometheus.sh will scan the cluster for any Prometheus service on port 9090.
+  serverAddress: http://kube-prometheus-stack-prometheus.kommander.svc.cluster.local:9090
