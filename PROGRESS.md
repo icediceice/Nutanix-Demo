@@ -67,6 +67,20 @@ pending, and decisions made. Update it at the end of every work block.
 
 ---
 
+### Session 6
+
+**Implemented:**
+- ✅ Clipboard copy works on HTTP (no HTTPS required)
+  - `ops/demo-wall/quickref.html`: rewrote `copyText()` with `isSecureContext`-first pattern — on HTTP calls `execFallback()` synchronously (still inside click handler, user gesture live), on HTTPS uses async Clipboard API with sync fallback. No false "Copied!" on failure.
+  - `apps/otel-shop-lite/src/services/frontend.py`: added `copyTrace(el)` helper with same pattern; replaced bare `navigator.clipboard.writeText()` inline onclick with `copyTrace(this)`.
+  - JS validated with `node --check` on rendered template.
+  - Cherry-picked to all 13 scenario branches (conflict-resolved on `policy-enforce` and `quota-pressure` — both had an older inline onclick with `writeText(\'' + id + '\')`).
+
+**Commits on main:**
+- `977ede0` — fix: clipboard copy works on HTTP (execCommand sync fallback)
+
+---
+
 ### Session 5
 
 **Implemented:**
