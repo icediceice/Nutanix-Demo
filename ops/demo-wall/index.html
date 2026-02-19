@@ -173,6 +173,14 @@
       content: "›"; position: absolute; left: 2px;
       color: var(--accent); font-weight: 700; font-size: 1rem;
     }
+    .watch-list li.has-link { cursor: pointer; }
+    .watch-list li.has-link:hover { color: #fff; }
+    a.watch-arrow {
+      display: inline-block; margin-left: 6px;
+      color: var(--muted); font-size: .7rem; text-decoration: none;
+      opacity: 0; transition: opacity .15s;
+    }
+    .watch-list li.has-link:hover a.watch-arrow { opacity: 1; color: var(--accent); }
 
     .workload-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
     .workload-row {
@@ -322,17 +330,29 @@
       const ul = document.getElementById("watchList");
       if (!ul) return;
       ul.innerHTML = "";
-      (items || []).forEach(text => {
-        const li = document.createElement("li");
-        li.textContent = text;
-        ul.appendChild(li);
-      });
       if (!items || items.length === 0) {
         const li = document.createElement("li");
         li.textContent = "No watch points defined for this scenario.";
         li.style.color = "var(--muted)";
         ul.appendChild(li);
+        return;
       }
+      (items || []).forEach(w => {
+        const text = (typeof w === "string") ? w : w.text;
+        const url  = (typeof w === "string") ? "" : (w.url || "");
+        const li = document.createElement("li");
+        li.textContent = text;
+        if (url) {
+          li.classList.add("has-link");
+          const a = document.createElement("a");
+          a.className = "watch-arrow"; a.href = url;
+          a.target = "_blank"; a.rel = "noreferrer";
+          a.textContent = "↗";
+          li.appendChild(a);
+          li.addEventListener("click", e => { if (e.target !== a) { window.open(url, "_blank", "noreferrer"); } });
+        }
+        ul.appendChild(li);
+      });
     }
 
     function renderWorkloads(items) {
