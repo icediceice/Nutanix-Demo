@@ -67,6 +67,25 @@ pending, and decisions made. Update it at the end of every work block.
 
 ---
 
+### Session 5
+
+**Implemented:**
+- ✅ `scenario/node-failure` — worker node resilience demo
+  - `ops/demo-wall/rbac.yaml`: `nodes` + `pods` get/list/watch added to `demo-wall-read` ClusterRole
+  - `ops/demo-wall/server.py`: `get_node_status()` returns ready/total + per-node status; `get_pod_placement()` returns pod-to-node mapping grouped by `{app}-{version}`; both exposed as `nodes`/`pods` in `/api/status`; `scenario/node-failure` added to `SCENARIO_META`
+  - `ops/demo-wall/index.html`: Node Health card (always visible, shows `X / N Ready`, NotReady node names); pod placement sub-rows under each workload row (name, node, phase, color-coded)
+  - `apps/otel-shop-lite/overlays/node-failure/`: 2 replicas + `preferredDuringScheduling` anti-affinity (spread across nodes) for all 4 v1 services; PodDisruptionBudgets (`minAvailable: 1`)
+  - `scenario/node-failure` branch: forked from `scenario/baseline`, uses `overlays/node-failure`, `weight-0` mesh, `baseline` load
+  - Cherry-picked to all 13 scenario branches (conflict-resolved `policy-enforce` + `quota-pressure` via `git checkout main -- <files>`)
+
+**Commits on main:**
+- `6bbada7` — feat: scenario/node-failure — worker node resilience demo
+
+**Commits on scenario/node-failure:**
+- cherry-pick of `6bbada7` + `50b38a1` (overlay selector)
+
+---
+
 ### Session 4
 
 **Implemented:**
@@ -104,6 +123,7 @@ Priority: **High** = do next session | **Med** = plan soon | **Low** = nice to h
 | 10 | Demo Wall kiosk mode (`?kiosk=1`) | Low | ⏳ Planned | CSS only — hides header/footer for TV display |
 | 11 | KEDA autoscaler card in Demo Wall | Low | ✅ Done | `get_keda_status()` in server.py; card hidden on non-KEDA branches; replica bar + Active/Idle state |
 | 12 | Storefront "Refresh Trace" button | Low | ⏭️ Skipped | Covered by #1 (checkout already shows fresh trace) |
+| 13 | `scenario/node-failure` — infra resilience demo | Med | ✅ Done | Node Health card + pod placement sub-rows in Demo Wall; 2-replica+anti-affinity overlay; PDBs |
 
 ---
 
