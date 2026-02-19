@@ -357,22 +357,37 @@ kubectl -n kommander-default-workspace get secret dkp-admin-user-password</pre>
 
   <script>
     function copyText(text, btn) {
-      navigator.clipboard.writeText(text.trim()).then(() => {
-        const orig = btn.textContent;
-        btn.textContent = "Copied!";
-        btn.classList.add("copied");
-        setTimeout(() => { btn.textContent = orig; btn.classList.remove("copied"); }, 1800);
-      }).catch(() => {
-        // Fallback for non-HTTPS
-        const ta = document.createElement("textarea");
-        ta.value = text.trim();
-        ta.style.position = "fixed"; ta.style.opacity = "0";
-        document.body.appendChild(ta); ta.select();
-        document.execCommand("copy");
+      var value = (text || "").trim();
+
+      function execFallback() {
+        var ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        var ok = document.execCommand("copy");
         document.body.removeChild(ta);
+        return ok;
+      }
+
+      function flash(ok) {
+        if (!ok) return;
+        var orig = btn.textContent;
         btn.textContent = "Copied!"; btn.classList.add("copied");
-        setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 1800);
-      });
+        setTimeout(function() { btn.textContent = orig; btn.classList.remove("copied"); }, 1800);
+      }
+
+      // HTTP: go straight to execFallback() synchronously — still inside the
+      // click handler so the user gesture is live and execCommand works.
+      // HTTPS: use async clipboard API with sync fallback on rejection.
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(value).then(
+          function() { flash(true); },
+          function() { flash(execFallback()); }
+        );
+      } else {
+        flash(execFallback());
+      }
     }
 
     function safe(v) { return (v == null || v === "") ? null : String(v); }
