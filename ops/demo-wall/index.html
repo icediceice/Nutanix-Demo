@@ -152,31 +152,104 @@
       transition: width 1.2s ease, background 1.2s ease; width: 0%;
     }
 
-    /* ── Platform access ── */
-    .links-grid {
+    /* ── At a Glance ── */
+    .glance-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: 3fr 2fr;
       gap: 10px;
     }
-    .link-card { display: flex; flex-direction: column; gap: 6px; }
-    .link-row  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .pill {
-      display: inline-block; border-radius: 999px;
-      border: 1px solid var(--line); padding: 2px 9px;
-      font-size: .68rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0;
+    @media (max-width: 640px) { .glance-grid { grid-template-columns: 1fr; } }
+
+    .watch-list {
+      margin: 8px 0 0; padding: 0; list-style: none;
     }
-    a.link {
-      color: var(--nx-blue); text-decoration: none; font-size: .82rem;
-      border-bottom: 1px dotted rgba(0,145,218,.4); word-break: break-all;
+    .watch-list li {
+      position: relative; padding: 6px 0 6px 18px;
+      font-size: .83rem; color: var(--ink); line-height: 1.45;
+      border-bottom: 1px solid rgba(0,64,104,.4);
     }
-    .hint { color: var(--muted); font-size: .78rem; line-height: 1.4; }
-    .cmd {
-      margin: 0; font-size: .71rem; color: #bfd2ec;
-      background: #0a1522; border: 1px solid #23374f;
-      border-radius: 7px; padding: 7px 9px;
-      white-space: pre-wrap; word-break: break-all;
+    .watch-list li:last-child { border-bottom: none; }
+    .watch-list li::before {
+      content: "›"; position: absolute; left: 2px;
+      color: var(--accent); font-weight: 700; font-size: 1rem;
     }
+    .watch-list li.has-link { cursor: pointer; }
+    .watch-list li.has-link:hover { color: #fff; }
+    a.watch-arrow {
+      display: inline-block; margin-left: 6px;
+      color: var(--muted); font-size: .7rem; text-decoration: none;
+      opacity: 0; transition: opacity .15s;
+    }
+    .watch-list li.has-link:hover a.watch-arrow { opacity: 1; color: var(--accent); }
+
+    .workload-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+    .workload-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid rgba(0,64,104,.4);
+    }
+    .workload-row:last-child { border-bottom: none; }
+    .workload-name  { flex: 1; font-family: monospace; font-size: .76rem; color: var(--ink); }
+    .workload-count { font-family: "Sora", sans-serif; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.good { background: var(--good); }
+    .status-dot.warn { background: var(--warn); box-shadow: 0 0 4px var(--warn); }
+    .status-dot.bad  { background: var(--bad);  box-shadow: 0 0 4px var(--bad); }
+
+    /* ── Pod placement sub-rows ── */
+    .pod-rows   { padding-left: 16px; }
+    .pod-row    { display: flex; gap: 6px; align-items: center;
+                  padding: 2px 0; font-size: .7rem; color: var(--muted); }
+    .pod-name   { font-family: monospace; flex: 1; }
+    .pod-node   { color: var(--accent); font-family: monospace; }
+    .pod-phase  { font-size: .65rem; }
+
+    /* ── Next-branch button ── */
+    .next-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 10px; padding: 4px 12px;
+      background: rgba(0,145,218,.1); border: 1px solid rgba(0,145,218,.3);
+      border-radius: 999px; color: var(--accent);
+      font-size: .72rem; font-family: "Work Sans", sans-serif;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .next-btn strong { font-weight: 600; }
+    .next-btn:hover  { background: rgba(0,145,218,.22); border-color: rgba(0,145,218,.6); color: #fff; }
+    .next-btn.switching { opacity: .55; cursor: wait; }
+
+    /* ── Switch modal ── */
+    .switch-overlay {
+      position: fixed; inset: 0; background: rgba(0,8,20,.82);
+      z-index: 9999; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .switch-modal-box {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 14px; padding: 24px; max-width: 420px; width: 100%;
+    }
+    .modal-title { font-family: "Sora", sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 8px; }
+    .modal-target { color: var(--accent); font-family: monospace; font-size: .9rem; }
+    .modal-hint   { margin-top: 6px; font-size: .75rem; color: var(--muted); line-height: 1.5; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .modal-btn {
+      padding: 7px 18px; border-radius: 8px; font-size: .82rem;
+      font-family: "Work Sans", sans-serif; font-weight: 600; cursor: pointer;
+      border: 1px solid var(--line);
+    }
+    .modal-btn-cancel { background: transparent; color: var(--muted); }
+    .modal-btn-cancel:hover { color: var(--ink); border-color: var(--muted); }
+    .modal-btn-ok { background: var(--nx-blue); color: #fff; border-color: var(--nx-blue); }
+    .modal-btn-ok:hover { background: #0082c8; }
+
+    /* ── Switch toast ── */
+    .switch-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 10px 22px; font-size: .85rem; color: var(--ink);
+      z-index: 9998; opacity: 0; transition: opacity .3s; white-space: nowrap;
+      max-width: 90vw; pointer-events: none;
+    }
+    .switch-toast.good { border-color: rgba(175,209,53,.5); color: var(--good); }
+    .switch-toast.bad  { border-color: rgba(255,82,82,.5);  color: var(--bad); }
 
     /* ── Status colours ── */
     .good { color: var(--good); }
@@ -274,13 +347,29 @@
           <div class="card-sub" id="kedaSub">-</div>
         </div>
 
+        <!-- Node Health (always visible) -->
+        <div class="card" id="nodeCard">
+          <div class="card-label">Node Health</div>
+          <div class="card-value" id="nodeValue">-</div>
+          <div class="card-sub"  id="nodeSub"></div>
+        </div>
+
       </div>
     </section>
 
-    <!-- ── Platform Access ── -->
-    <p class="section-label">Platform Access</p>
-    <section class="section card">
-      <div id="linksGrid" class="links-grid"></div>
+    <!-- ── At a Glance ── -->
+    <p class="section-label">At a Glance</p>
+    <section class="section">
+      <div class="glance-grid">
+        <div class="card">
+          <div class="card-label">Watch for this scenario</div>
+          <ul class="watch-list" id="watchList"></ul>
+        </div>
+        <div class="card">
+          <div class="card-label">Workloads</div>
+          <div class="workload-list" id="workloadList"></div>
+        </div>
+      </div>
     </section>
 
     <div id="error" class="error"></div>
@@ -291,6 +380,28 @@
     </footer>
   </div>
 
+  <!-- ── One-time switch confirmation modal ── -->
+  <div id="switchModal" class="switch-overlay" style="display:none">
+    <div class="switch-modal-box">
+      <div class="modal-title">Switch Scenario?</div>
+      <div style="font-size:.85rem;color:var(--ink);margin-top:4px;">
+        This will patch ArgoCD <code>targetRevision</code> to<br>
+        <span class="modal-target" id="switchTargetLabel"></span>
+      </div>
+      <div class="modal-hint">
+        ArgoCD will reconcile the new scenario automatically.<br>
+        You won't be asked again this session.
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" id="switchCancel">Cancel</button>
+        <button class="modal-btn modal-btn-ok"     id="switchConfirm">Switch &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Switch feedback toast ── -->
+  <div id="switchToast" class="switch-toast"></div>
+
   <script>
     function cls(v) {
       if (v === "good" || v === "Healthy" || v === "Synced" || v === "ready") return "good";
@@ -300,41 +411,75 @@
     function safe(v) { return (v == null || v === "") ? "-" : String(v); }
     function shortSha(v) { const s = safe(v); return (s !== "-" && s.length > 12) ? s.slice(0,12) : s; }
 
-    function renderLinks(items) {
-      const grid = document.getElementById("linksGrid");
-      grid.innerHTML = "";
-      (items || []).forEach(link => {
-        const card = document.createElement("article");
-        card.className = "card link-card";
-
-        const title = document.createElement("div");
-        title.className = "card-label";
-        title.textContent = safe(link.name);
-        card.appendChild(title);
-
-        const row = document.createElement("div");
-        row.className = "link-row";
-
-        const badge = document.createElement("span");
-        badge.className = "pill " + cls(link.status);
-        badge.textContent = safe(link.status);
-        row.appendChild(badge);
-
-        if (link.url) {
+    function renderWatch(items) {
+      const ul = document.getElementById("watchList");
+      if (!ul) return;
+      ul.innerHTML = "";
+      if (!items || items.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No watch points defined for this scenario.";
+        li.style.color = "var(--muted)";
+        ul.appendChild(li);
+        return;
+      }
+      (items || []).forEach(w => {
+        const text = (typeof w === "string") ? w : w.text;
+        const url  = (typeof w === "string") ? "" : (w.url || "");
+        const li = document.createElement("li");
+        li.textContent = text;
+        if (url) {
+          li.classList.add("has-link");
           const a = document.createElement("a");
-          a.className = "link"; a.href = link.url;
+          a.className = "watch-arrow"; a.href = url;
           a.target = "_blank"; a.rel = "noreferrer";
-          a.textContent = link.url;
-          row.appendChild(a);
+          a.textContent = "↗";
+          li.appendChild(a);
+          li.addEventListener("click", e => { if (e.target !== a) { window.open(url, "_blank", "noreferrer"); } });
         }
-        card.appendChild(row);
+        ul.appendChild(li);
+      });
+    }
 
-        if (link.hint)     { const d = document.createElement("div"); d.className = "hint"; d.textContent = link.hint; card.appendChild(d); }
-        if (link.username) { const d = document.createElement("div"); d.className = "hint"; d.textContent = "Username: " + link.username; card.appendChild(d); }
-        if (link.password) { const d = document.createElement("pre"); d.className = "cmd";  d.textContent = "Password: " + link.password; card.appendChild(d); }
-        if (link.command)  { const d = document.createElement("pre"); d.className = "cmd";  d.textContent = link.command; card.appendChild(d); }
+    function renderWorkloads(items, podMap) {
+      const list = document.getElementById("workloadList");
+      if (!list) return;
+      list.innerHTML = "";
+      (items || []).forEach(w => {
+        const row = document.createElement("div");
+        row.className = "workload-row";
 
-        grid.appendChild(card);
+        const dot = document.createElement("span");
+        dot.className = "status-dot " + (w.status || "warn");
+        row.appendChild(dot);
+
+        const name = document.createElement("span");
+        name.className = "workload-name";
+        name.textContent = w.name;
+        row.appendChild(name);
+
+        const count = document.createElement("span");
+        count.className = "workload-count " + (w.status || "warn");
+        count.textContent = w.ready + "/" + w.desired;
+        row.appendChild(count);
+
+        list.appendChild(row);
+
+        const pods = (podMap || {})[w.name] || [];
+        if (pods.length) {
+          const podDiv = document.createElement("div");
+          podDiv.className = "pod-rows";
+          pods.forEach(function(p) {
+            const pr = document.createElement("div");
+            pr.className = "pod-row";
+            pr.innerHTML =
+              '<span class="status-dot ' + p.status + '" style="width:6px;height:6px"></span>' +
+              '<span class="pod-name">' + p.name + '</span>' +
+              '<span class="pod-node">' + (p.node || "?") + '</span>' +
+              '<span class="pod-phase ' + p.status + '">' + p.phase + '</span>';
+            podDiv.appendChild(pr);
+          });
+          list.appendChild(podDiv);
+        }
       });
     }
 
@@ -350,12 +495,30 @@
       if (intentEl) intentEl.textContent = cd.intent || "";
 
       const nextEl = document.getElementById("scenarioNext");
-      if (nextEl) nextEl.innerHTML = cd.next ? `Next \u2192 <strong>${cd.next}</strong>` : "";
+      if (nextEl) {
+        nextEl.innerHTML = "";
+        if (cd.next) {
+          const fullBranch = "scenario/" + cd.next;
+          const btn = document.createElement("button");
+          btn.className = "next-btn";
+          btn.innerHTML = "Next &rarr; <strong>" + cd.next + "</strong>";
+          btn.title = "Switch ArgoCD to " + fullBranch;
+          btn.addEventListener("click", function() { handleSwitch(fullBranch); });
+          nextEl.appendChild(btn);
+        }
+      }
 
       const healthEl = document.getElementById("cdHealth");
       if (healthEl) {
-        healthEl.textContent = `${safe(cd.sync)} / ${safe(cd.health)}`;
-        healthEl.className = "scenario-health " + cls(cd.health);
+        const withinGrace = _switchTime > 0 && (Date.now() - _switchTime) < 90000;
+        const alreadySynced = cd.sync === "Synced" && cd.health === "Healthy";
+        if (withinGrace && !alreadySynced) {
+          healthEl.textContent = "Syncing\u2026";
+          healthEl.className = "scenario-health warn";
+        } else {
+          healthEl.textContent = safe(cd.sync) + " / " + safe(cd.health);
+          healthEl.className = "scenario-health " + cls(cd.health);
+        }
       }
       const revEl = document.getElementById("cdRevision");
       if (revEl) revEl.textContent = shortSha(cd.revision) !== "-" ? "rev " + shortSha(cd.revision) : "";
@@ -431,7 +594,21 @@
         }
       }
 
-      renderLinks(data.links || []);
+      // ── Node Health ──
+      const nd = data.nodes || {};
+      const nvEl = document.getElementById("nodeValue");
+      if (nvEl && nd.total != null) {
+        nvEl.textContent = nd.ready + " / " + nd.total + " Ready";
+        nvEl.className = "card-value " + cls(nd.status);
+      }
+      const nsEl = document.getElementById("nodeSub");
+      if (nsEl) {
+        const notReady = (nd.nodes || []).filter(function(n) { return !n.ready; }).map(function(n) { return n.name; });
+        nsEl.textContent = notReady.length ? "NotReady: " + notReady.join(", ") : "All nodes healthy";
+      }
+
+      renderWatch((data.cd || {}).watch || []);
+      renderWorkloads(data.workloads || [], data.pods || {});
       document.getElementById("error").textContent = "";
     }
 
@@ -444,6 +621,69 @@
         document.getElementById("error").textContent = "Status fetch failed: " + err;
       }
     }
+
+    // ── Scenario switching ──────────────────────────────────────────
+    let _switchTarget = "";
+    let _switchTime   = 0;         // ms timestamp when last switch was initiated
+    const SWITCH_GRACE_MS = 90000; // suppress transient Missing/OutOfSync for up to 90 s
+
+    function handleSwitch(branch) {
+      _switchTarget = branch;
+      // Show the one-time confirmation the first time only (per session).
+      if (!sessionStorage.getItem("dw-switch-confirmed")) {
+        document.getElementById("switchTargetLabel").textContent = branch;
+        document.getElementById("switchModal").style.display = "flex";
+      } else {
+        doSwitch(branch);
+      }
+    }
+
+    async function doSwitch(branch) {
+      document.getElementById("switchModal").style.display = "none";
+      document.querySelectorAll(".next-btn").forEach(b => {
+        b.disabled = true; b.classList.add("switching");
+      });
+      try {
+        const res = await fetch("/api/switch-scenario", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({branch: branch})
+        });
+        const data = await res.json();
+        if (data.ok) {
+          _switchTime = Date.now();
+          showToast("Switching to " + branch + " \u2013 ArgoCD syncing\u2026", "good");
+        } else {
+          showToast("Switch failed: " + (data.error || "unknown"), "bad");
+        }
+      } catch (err) {
+        showToast("Switch failed: " + err, "bad");
+      } finally {
+        document.querySelectorAll(".next-btn").forEach(b => {
+          b.disabled = false; b.classList.remove("switching");
+        });
+      }
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById("switchToast");
+      if (!t) return;
+      t.textContent = msg;
+      t.className = "switch-toast" + (type ? " " + type : "");
+      t.style.opacity = "1";
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function() { t.style.opacity = "0"; }, 4500);
+    }
+
+    document.getElementById("switchCancel").addEventListener("click", function() {
+      document.getElementById("switchModal").style.display = "none";
+      _switchTarget = "";
+    });
+    document.getElementById("switchConfirm").addEventListener("click", function() {
+      sessionStorage.setItem("dw-switch-confirmed", "1");
+      doSwitch(_switchTarget);
+    });
+    // ── End scenario switching ──────────────────────────────────────
 
     tick();
     setInterval(tick, 5000);

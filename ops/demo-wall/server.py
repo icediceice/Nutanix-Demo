@@ -11,18 +11,123 @@ import urllib.parse
 
 
 SCENARIO_META = {
-    "scenario/baseline":         {"intent": "Stable baseline — 100% traffic to v1, load active", "next": "canary-10"},
-    "scenario/load-off":         {"intent": "Load off — cluster at rest, safe to inspect", "next": "baseline"},
-    "scenario/load-peak":        {"intent": "Peak load — stress-testing v1 capacity", "next": "baseline"},
-    "scenario/canary-10":        {"intent": "Progressive delivery — 10% traffic shifted to v2", "next": "canary-50"},
-    "scenario/canary-50":        {"intent": "Progressive delivery — 50 / 50 split, compare RED metrics", "next": "canary-100"},
-    "scenario/canary-100":       {"intent": "Full cutover — 100% traffic on v2", "next": "incident-latency"},
-    "scenario/incident-latency": {"intent": "Incident drill — v2 injecting 1 s latency, watch Jaeger traces", "next": "incident-error"},
-    "scenario/incident-error":   {"intent": "Incident drill — v2 returning 10% errors, watch Kiali graph", "next": "baseline"},
-    "scenario/mirror-v2":        {"intent": "Traffic mirroring — v2 receives shadow copies silently", "next": "baseline"},
-    "scenario/keda-checkout":    {"intent": "Autoscaling — checkout-api scales to zero when idle", "next": "baseline"},
-    "scenario/quota-pressure":   {"intent": "Quota pressure — namespace at ~75% pod capacity, guardrails active", "next": "baseline"},
-    "scenario/policy-enforce":   {"intent": "Policy enforcement — Gatekeeper denying non-compliant pods at admission", "next": "baseline"},
+    "scenario/baseline": {
+        "intent": "Stable baseline — 100% traffic to v1, load active",
+        "next": "canary-10",
+        "watch": [
+            {"text": "ArgoCD: Synced + Healthy (both green)",       "tool": "ArgoCD"},
+            {"text": "Traffic: 100% v1 · loadgen baseline active"},
+            {"text": "Policy: dryrun · 0 violations expected"},
+        ],
+    },
+    "scenario/load-off": {
+        "intent": "Load off — cluster at rest, safe to inspect",
+        "next": "baseline",
+        "watch": [
+            {"text": "All pods running · no active traffic"},
+            {"text": "Safe moment to walk through any UI or config", "tool": "ArgoCD"},
+            {"text": "Switch to baseline to resume the demo"},
+        ],
+    },
+    "scenario/load-peak": {
+        "intent": "Peak load — stress-testing v1 capacity",
+        "next": "baseline",
+        "watch": [
+            {"text": "Grafana: elevated RPS on frontend-v1",        "tool": "Grafana"},
+            {"text": "Watch CPU / memory creep on pod metrics",     "tool": "Grafana"},
+            {"text": "HPA triggers if resource thresholds are hit"},
+        ],
+    },
+    "scenario/canary-10": {
+        "intent": "Progressive delivery — 10% traffic shifted to v2",
+        "next": "canary-50",
+        "watch": [
+            {"text": "Kiali: thin green edge to v2 (≈10% of requests)", "tool": "Kiali"},
+            {"text": "Jaeger: new traces tagged service.version=v2",     "tool": "Jaeger"},
+            {"text": "No error spike → safe to widen the canary"},
+        ],
+    },
+    "scenario/canary-50": {
+        "intent": "Progressive delivery — 50 / 50 split, compare RED metrics",
+        "next": "canary-100",
+        "watch": [
+            {"text": "Kiali: equal-weight edges to v1 and v2",          "tool": "Kiali"},
+            {"text": "Grafana: compare v1 vs v2 latency side by side",  "tool": "Grafana"},
+            {"text": "No regressions → promote to 100%"},
+        ],
+    },
+    "scenario/canary-100": {
+        "intent": "Full cutover — 100% traffic on v2",
+        "next": "incident-latency",
+        "watch": [
+            {"text": "Kiali: single thick edge — all traffic on v2",    "tool": "Kiali"},
+            {"text": "v1 pods still running · rollback = one patch command"},
+            {"text": "Rollback SLA: restore canary-10 in under 3 minutes"},
+        ],
+    },
+    "scenario/incident-latency": {
+        "intent": "Incident drill — v2 injecting 1 s latency, watch Jaeger traces",
+        "next": "incident-error",
+        "watch": [
+            {"text": "Jaeger: payment spans show 1 s+ duration on v2", "tool": "Jaeger"},
+            {"text": "Grafana: p99 latency spike on payment-mock-v2",   "tool": "Grafana"},
+            {"text": "Rollback: patch targetRevision → canary-10 to isolate"},
+        ],
+    },
+    "scenario/incident-error": {
+        "intent": "Incident drill — v2 returning 10% errors, watch Kiali graph",
+        "next": "baseline",
+        "watch": [
+            {"text": "Kiali: red error edges on payment-mock-v2 (≈10% 5xx)", "tool": "Kiali"},
+            {"text": "Grafana: error rate panel shows spike on v2",           "tool": "Grafana"},
+            {"text": "Jaeger: filter by status=ERROR to trace root cause",    "tool": "Jaeger"},
+        ],
+    },
+    "scenario/mirror-v2": {
+        "intent": "Traffic mirroring — v2 receives shadow copies silently",
+        "next": "baseline",
+        "watch": [
+            {"text": "Kiali: dashed mirror edge to v2 — zero user impact",  "tool": "Kiali"},
+            {"text": "Jaeger: v2 traces appear without affecting v1 users",  "tool": "Jaeger"},
+            {"text": "Compare v2 behaviour safely before promoting"},
+        ],
+    },
+    "scenario/keda-checkout": {
+        "intent": "Autoscaling — checkout-api scales to zero when idle",
+        "next": "baseline",
+        "watch": [
+            {"text": "KEDA card: checkout-api replicas drop to 0 at rest"},
+            {"text": "Send load · watch replicas climb back in real time"},
+            {"text": "Grafana: pod count metric reflects scale events",      "tool": "Grafana"},
+        ],
+    },
+    "scenario/quota-pressure": {
+        "intent": "Quota pressure — namespace at ~75% pod capacity, guardrails active",
+        "next": "baseline",
+        "watch": [
+            {"text": "Quota card: pod usage approaching namespace limit"},
+            {"text": "Gatekeeper: new pods blocked once hard limit is hit"},
+            {"text": "Grafana: resource saturation panel turns amber",       "tool": "Grafana"},
+        ],
+    },
+    "scenario/policy-enforce": {
+        "intent": "Policy enforcement — Gatekeeper denying non-compliant pods at admission",
+        "next": "baseline",
+        "watch": [
+            {"text": "Policy card: enforcement mode = deny (red badge)"},
+            {"text": "Try kubectl apply of a bad pod → admission denied"},
+            {"text": "ArgoCD: watch sync status after policy change",        "tool": "ArgoCD"},
+        ],
+    },
+    "scenario/node-failure": {
+        "intent": "Node resilience — delete a worker node, watch Kubernetes evict & NKP auto-replace",
+        "next": "baseline",
+        "watch": [
+            {"text": "Node Health card: watch a node flip NotReady after NKP deletion", "tool": "Kommander"},
+            {"text": "Workloads: pods on the deleted node show Pending, then reschedule to surviving nodes"},
+            {"text": "NKP CAPI provisions a replacement node and rejoins the cluster", "tool": "Kommander"},
+        ],
+    },
 }
 
 
@@ -55,6 +160,34 @@ def k8s_get_json(path: str):
         return {"_error": f"{type(e).__name__}: {e}"}
 
 
+def _k8s_patch_json(path: str, body: dict):
+    """PATCH a k8s resource with merge-patch+json. Returns parsed JSON or {_error:...}."""
+    host = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
+    port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+    url = f"https://{host}:{port}{path}"
+    token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    ca_path    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    try:
+        with open(token_path, "r", encoding="utf-8") as f:
+            token = f.read().strip()
+        ctx  = ssl.create_default_context(cafile=ca_path)
+        data = json.dumps(body).encode("utf-8")
+        req  = urllib.request.Request(url, data=data, method="PATCH")
+        req.add_header("Authorization", f"Bearer {token}")
+        req.add_header("Content-Type",  "application/merge-patch+json")
+        req.add_header("Accept",        "application/json")
+        with urllib.request.urlopen(req, context=ctx, timeout=5) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = e.read().decode("utf-8")
+        except Exception:
+            err_body = ""
+        return {"_error": f"HTTP {e.code}: {err_body}"}
+    except Exception as e:
+        return {"_error": f"{type(e).__name__}: {e}"}
+
+
 def _read_secret_b64(namespace: str, name: str, key: str) -> str:
     """Read a base64-encoded value from a k8s Secret. Returns '' on any error."""
     secret = k8s_get_json(f"/api/v1/namespaces/{namespace}/secrets/{name}")
@@ -69,18 +202,32 @@ def _read_secret_b64(namespace: str, name: str, key: str) -> str:
         return ""
 
 
+_KOMMANDER_CRED_CANDIDATES = [
+    ("kommander",                   "dkp-credentials",             "username", "password"),
+    ("kommander-default-workspace", "dkp-credentials",             "username", "password"),
+    ("kommander-default-workspace", "dkp-admin-user-password",     "",         "password"),
+    ("kommander",                   "dkp-admin-user-password",     "",         "password"),
+    ("kommander-default-workspace", "kommander-admin-credentials", "",         "password"),
+    ("kommander",                   "kommander-admin-credentials", "",         "password"),
+]
+
+
 def _discover_kommander_password() -> str:
     """Try known NKP/DKP secret locations for the SSO admin password."""
-    candidates = [
-        ("kommander-default-workspace", "dkp-admin-user-password", "password"),
-        ("kommander",                   "dkp-admin-user-password", "password"),
-        ("kommander-default-workspace", "kommander-admin-credentials", "password"),
-        ("kommander",                   "kommander-admin-credentials", "password"),
-    ]
-    for ns, sname, skey in candidates:
-        val = _read_secret_b64(ns, sname, skey)
+    for ns, sname, _ukey, pkey in _KOMMANDER_CRED_CANDIDATES:
+        val = _read_secret_b64(ns, sname, pkey)
         if val:
             return val
+    return ""
+
+
+def _discover_kommander_username() -> str:
+    """Try known NKP/DKP secret locations for the SSO admin username."""
+    for ns, sname, ukey, pkey in _KOMMANDER_CRED_CANDIDATES:
+        if ukey and _read_secret_b64(ns, sname, pkey):
+            val = _read_secret_b64(ns, sname, ukey)
+            if val:
+                return val
     return ""
 
 
@@ -349,7 +496,11 @@ def build_quick_links():
         os.environ.get("ARGOCD_PASSWORD", "")
         or _read_secret_b64("argocd", "argocd-initial-admin-secret", "password")
     )
-    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "") or "admin"
+    kommander_sso_user = (
+        os.environ.get("KOMMANDER_SSO_USERNAME", "")
+        or _discover_kommander_username()
+        or "admin"
+    )
     kommander_sso_pass = (
         os.environ.get("KOMMANDER_SSO_PASSWORD", "")
         or _discover_kommander_password()
@@ -676,6 +827,95 @@ def get_keda_status():
     }
 
 
+def _resolve_watch(watch_items, links):
+    """Resolve tool names in watch points to discovered URLs."""
+    link_map = {l["name"]: l.get("url", "") for l in links if l.get("url")}
+    return [
+        {"text": w["text"], "url": link_map.get(w.get("tool", ""), "")}
+        for w in watch_items
+    ]
+
+
+def build_workloads():
+    """Return replica health for all deployments in demo-app namespace."""
+    data = k8s_get_json("/apis/apps/v1/namespaces/demo-app/deployments")
+    if "_error" in data:
+        return []
+    result = []
+    for item in (data.get("items") or []):
+        name    = get_nested(item, ["metadata", "name"], "?")
+        desired = get_nested(item, ["spec", "replicas"], 0) or 0
+        ready   = get_nested(item, ["status", "readyReplicas"], 0) or 0
+        image   = get_nested(item, ["spec", "template", "spec", "containers", 0, "image"], "")
+        tag     = image.split(":")[-1] if ":" in image else image
+        status  = "good" if (ready >= desired and desired > 0) else ("warn" if ready > 0 else "bad")
+        result.append({"name": name, "ready": ready, "desired": desired, "tag": tag, "status": status})
+    return sorted(result, key=lambda x: x["name"])
+
+
+def get_node_status():
+    """Return node readiness summary for the cluster."""
+    import math
+    data = k8s_get_json("/api/v1/nodes")
+    if "_error" in data:
+        return {"total": 0, "ready": 0, "status": "warn", "nodes": []}
+    nodes = []
+    for item in (data.get("items") or []):
+        # Prefer kubernetes.io/hostname label, else first segment of node name.
+        labels = (item.get("metadata") or {}).get("labels") or {}
+        name = labels.get("kubernetes.io/hostname") or (item.get("metadata") or {}).get("name", "?")
+        name = name.split(".")[0]
+        ready = False
+        for cond in ((item.get("status") or {}).get("conditions") or []):
+            if cond.get("type") == "Ready":
+                ready = cond.get("status") == "True"
+                break
+        nodes.append({"name": name, "ready": ready})
+    total = len(nodes)
+    ready_count = sum(1 for n in nodes if n["ready"])
+    if ready_count == total:
+        status = "good"
+    elif ready_count >= math.ceil(total / 2):
+        status = "warn"
+    else:
+        status = "bad"
+    return {"total": total, "ready": ready_count, "status": status, "nodes": nodes}
+
+
+def get_pod_placement():
+    """Return pod-to-node placement for demo-app namespace, grouped by deployment key."""
+    data = k8s_get_json("/api/v1/namespaces/demo-app/pods")
+    if "_error" in data:
+        return {}
+    result = {}
+    for item in (data.get("items") or []):
+        meta   = item.get("metadata") or {}
+        labels = meta.get("labels") or {}
+        app    = labels.get("app", "")
+        ver    = labels.get("version", "")
+        if not app or not ver:
+            continue
+        key      = f"{app}-{ver}"
+        pod_name = meta.get("name", "?")
+        # Compact: "…" + last 5 chars of the random suffix.
+        suffix = pod_name[-5:] if len(pod_name) >= 5 else pod_name
+        short  = f"{key}-\u2026{suffix}"
+        node   = (item.get("spec") or {}).get("nodeName") or ""
+        # Trim node name to hostname label segment.
+        node = node.split(".")[0] if node else ""
+        phase  = (item.get("status") or {}).get("phase", "Unknown")
+        if phase == "Running":
+            pod_status = "good"
+        elif phase in ("Pending", "ContainerCreating"):
+            pod_status = "warn"
+        else:
+            pod_status = "bad"
+        if key not in result:
+            result[key] = []
+        result[key].append({"name": short, "node": node, "phase": phase, "status": pod_status})
+    return result
+
+
 def build_payload():
     # ArgoCD app status
     app = k8s_get_json("/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo")
@@ -730,6 +970,9 @@ def build_payload():
     links = build_quick_links()
     keda = get_keda_status()
     quota = get_quota_status()
+    workloads = build_workloads()
+    nodes = get_node_status()
+    pods = get_pod_placement()
 
     return {
         "now": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -742,6 +985,7 @@ def build_payload():
             "health": health_status,
             "intent": meta["intent"],
             "next": meta["next"],
+            "watch": _resolve_watch(meta.get("watch", []), links),
         },
         "loadgen": {
             "desiredReplicas": desired,
@@ -765,12 +1009,33 @@ def build_payload():
         ],
         "keda": keda,
         "quota": quota,
+        "workloads": workloads,
+        "nodes": nodes,
+        "pods": pods,
         "links": links,
         "scenarios": [
             {"branch": k, "intent": v["intent"], "next": v.get("next", "")}
             for k, v in SCENARIO_META.items()
         ],
     }
+
+
+def switch_scenario(branch: str):
+    """Patch ArgoCD Application targetRevision and trigger a hard refresh."""
+    if branch not in SCENARIO_META:
+        return {"ok": False, "error": f"Unknown branch: {branch!r}"}
+    result = _k8s_patch_json(
+        "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo",
+        {"spec": {"source": {"targetRevision": branch}}},
+    )
+    if "_error" in result:
+        return {"ok": False, "error": result["_error"]}
+    # Trigger ArgoCD hard refresh — best-effort, ignore errors
+    _k8s_patch_json(
+        "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/rx-demo",
+        {"metadata": {"annotations": {"argocd.argoproj.io/refresh": "hard"}}},
+    )
+    return {"ok": True, "branch": branch}
 
 
 def serve(port: int):
@@ -825,6 +1090,26 @@ def serve(port: int):
                 return
 
             self.send_response(404)
+            self.end_headers()
+
+        def do_POST(self):
+            if self.path == "/api/switch-scenario":
+                length = int(self.headers.get("Content-Length", 0) or 0)
+                raw = self.rfile.read(length) if length > 0 else b"{}"
+                try:
+                    req_data = json.loads(raw.decode("utf-8"))
+                except Exception:
+                    req_data = {}
+                branch = str(req_data.get("branch", ""))
+                result = switch_scenario(branch)
+                data = json.dumps(result, separators=(",", ":")).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            self.send_response(405)
             self.end_headers()
 
         def log_message(self, fmt, *args):
