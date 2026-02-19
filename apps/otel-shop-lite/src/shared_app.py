@@ -35,7 +35,7 @@ def _setup_logging(service_name: str) -> logging.Logger:
 
 
 def _setup_otel(service_name: str) -> None:
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger-collector.kommander.svc.cluster.local:4317")
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger-jaeger-operator-jaeger-collector.istio-system.svc.cluster.local:4317")
     namespace = os.getenv("OTEL_SERVICE_NAMESPACE", "demo-app")
 
     provider = TracerProvider(resource=Resource.create({
