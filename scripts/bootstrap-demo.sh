@@ -386,6 +386,44 @@ EOF
   fi
 }
 
+seed_demo_wall_access() {
+  # Pull Kommander SSO credentials from the management cluster and create the
+  # demo-wall-access secret on the workload cluster so demo-wall can display them.
+  # Requires --mgmt-kubeconfig; skips gracefully if not provided.
+  if [[ -z "${MGMT_KUBECONFIG_PATH}" && -z "${MGMT_CONTEXT_NAME}" ]]; then
+    warn "No --mgmt-kubeconfig provided; skipping demo-wall-access credential seeding."
+    warn "Demo Wall will show empty credentials until you run:"
+    warn "  kubectl create secret generic demo-wall-access -n demo-ops \\"
+    warn "    --from-literal=kommander_username=<user> \\"
+    warn "    --from-literal=kommander_password=<pass>"
+    return 0
+  fi
+
+  local cred_ns="kommander"
+  local cred_name="dkp-credentials"
+
+  local mgmt_user mgmt_pass
+  mgmt_user="$(kc_mgmt get secret -n "${cred_ns}" "${cred_name}" \
+    -o jsonpath='{.data.username}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+  mgmt_pass="$(kc_mgmt get secret -n "${cred_ns}" "${cred_name}" \
+    -o jsonpath='{.data.password}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+
+  if [[ -z "${mgmt_pass}" ]]; then
+    warn "Could not read ${cred_ns}/${cred_name} from management cluster; skipping demo-wall-access seeding."
+    return 0
+  fi
+
+  # demo-ops namespace may not exist yet if ArgoCD hasn't synced; create it so the secret lands.
+  kc get ns demo-ops >/dev/null 2>&1 || kc create ns demo-ops >/dev/null
+
+  kc create secret generic demo-wall-access -n demo-ops \
+    --from-literal=kommander_username="${mgmt_user:-admin}" \
+    --from-literal=kommander_password="${mgmt_pass}" \
+    --dry-run=client -o yaml | kc apply -f - >/dev/null
+
+  echo "demo-wall-access secret seeded in demo-ops (user: ${mgmt_user:-admin})"
+}
+
 maybe_suspend_demo_flux() {
   # If Flux demo objects exist (from older demo versions), they will fight with ArgoCD over the same resources.
   # We do not uninstall Flux; we only suspend the demo-specific Kustomizations if they exist.
@@ -450,6 +488,8 @@ kc -n "$ARGO_NS" patch application "$APP_NAME" --type merge \
 kc -n "$ARGO_NS" annotate application "$APP_NAME" argocd.argoproj.io/refresh=hard --overwrite >/dev/null
 
 maybe_set_keda_prometheus_endpoint
+
+seed_demo_wall_access
 
 echo
 echo "ArgoCD:"
