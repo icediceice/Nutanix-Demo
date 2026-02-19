@@ -390,21 +390,18 @@ def _render_frontend(version: str) -> tuple[str, str]:
     }
     body.v1 .trace-badge-label { color: var(--v1-muted); }
     body.v2 .trace-badge-label { color: var(--v2-muted); }
-    .trace-link {
-      display: flex; align-items: center; justify-content: space-between;
-      font-family: monospace; font-size: 0.68rem;
-      word-break: break-all; letter-spacing: 0.02em; color: var(--nx-blue);
-      text-decoration: none;
-    }
-    .trace-link:hover { text-decoration: underline; }
     .trace-id {
       display: block; font-family: monospace; font-size: 0.68rem;
-      word-break: break-all; user-select: all; cursor: text;
-      letter-spacing: 0.02em;
+      word-break: break-all; overflow-wrap: break-word;
+      user-select: all; cursor: text; letter-spacing: 0.02em;
     }
     body.v1 .trace-id { color: var(--v1-muted); }
     body.v2 .trace-id { color: var(--v2-muted); }
-    .trace-arrow { opacity: 0.7; font-size: 0.78rem; }
+    .trace-jaeger {
+      display: block; font-size: 0.64rem; margin-top: 4px;
+      opacity: 0.7; color: var(--nx-blue); text-decoration: none;
+    }
+    .trace-jaeger:hover { text-decoration: underline; }
 
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .stat-chip { border-radius: 8px; padding: 10px 12px; text-align: center; }
@@ -658,15 +655,11 @@ def _render_frontend(version: str) -> tuple[str, str]:
       const badge   = document.getElementById("traceBadge");
       const content = document.getElementById("traceContent");
       if (!badge || !content) return;
-      if (jaegerUrl) {
-        content.innerHTML =
-          '<a class="trace-link" href="' + jaegerUrl + '/trace/' + id +
-          '" target="_blank" rel="noreferrer">' +
-          '<span>' + id + '</span>' +
-          '<span class="trace-arrow">\u2192 Jaeger</span></a>';
-      } else {
-        content.innerHTML = '<code class="trace-id">' + id + '</code>';
-      }
+      const jaegerLink = jaegerUrl
+        ? '<a class="trace-jaeger" href="' + jaegerUrl + '/trace/' + id +
+          '" target="_blank" rel="noreferrer">\u2192 Open in Jaeger</a>'
+        : '';
+      content.innerHTML = '<code class="trace-id">' + id + '</code>' + jaegerLink;
       badge.style.display = "block";
     }
 
