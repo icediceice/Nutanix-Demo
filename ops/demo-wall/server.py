@@ -69,18 +69,32 @@ def _read_secret_b64(namespace: str, name: str, key: str) -> str:
         return ""
 
 
+_KOMMANDER_CRED_CANDIDATES = [
+    ("kommander",                   "dkp-credentials",             "username", "password"),
+    ("kommander-default-workspace", "dkp-credentials",             "username", "password"),
+    ("kommander-default-workspace", "dkp-admin-user-password",     "",         "password"),
+    ("kommander",                   "dkp-admin-user-password",     "",         "password"),
+    ("kommander-default-workspace", "kommander-admin-credentials", "",         "password"),
+    ("kommander",                   "kommander-admin-credentials", "",         "password"),
+]
+
+
 def _discover_kommander_password() -> str:
     """Try known NKP/DKP secret locations for the SSO admin password."""
-    candidates = [
-        ("kommander-default-workspace", "dkp-admin-user-password", "password"),
-        ("kommander",                   "dkp-admin-user-password", "password"),
-        ("kommander-default-workspace", "kommander-admin-credentials", "password"),
-        ("kommander",                   "kommander-admin-credentials", "password"),
-    ]
-    for ns, sname, skey in candidates:
-        val = _read_secret_b64(ns, sname, skey)
+    for ns, sname, _ukey, pkey in _KOMMANDER_CRED_CANDIDATES:
+        val = _read_secret_b64(ns, sname, pkey)
         if val:
             return val
+    return ""
+
+
+def _discover_kommander_username() -> str:
+    """Try known NKP/DKP secret locations for the SSO admin username."""
+    for ns, sname, ukey, pkey in _KOMMANDER_CRED_CANDIDATES:
+        if ukey and _read_secret_b64(ns, sname, pkey):
+            val = _read_secret_b64(ns, sname, ukey)
+            if val:
+                return val
     return ""
 
 
@@ -349,7 +363,11 @@ def build_quick_links():
         os.environ.get("ARGOCD_PASSWORD", "")
         or _read_secret_b64("argocd", "argocd-initial-admin-secret", "password")
     )
-    kommander_sso_user = os.environ.get("KOMMANDER_SSO_USERNAME", "") or "admin"
+    kommander_sso_user = (
+        os.environ.get("KOMMANDER_SSO_USERNAME", "")
+        or _discover_kommander_username()
+        or "admin"
+    )
     kommander_sso_pass = (
         os.environ.get("KOMMANDER_SSO_PASSWORD", "")
         or _discover_kommander_password()
