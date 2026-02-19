@@ -67,6 +67,22 @@ pending, and decisions made. Update it at the end of every work block.
 
 ---
 
+### Session 7
+
+**Implemented:**
+- ✅ Trace ID — remove copy button entirely; show full 32-char ID as selectable text
+  - `apps/otel-shop-lite/src/services/frontend.py`: removed `copyTrace()`, removed 16-char truncation in `showTrace()`; without Jaeger URL the trace ID renders as `<code class="trace-id">` with `user-select:all` so a single click selects all for Ctrl+C; with Jaeger URL the link shows the full ID.
+  - CSS `.trace-copy` replaced by `.trace-id` (monospace, `word-break:break-all`, `user-select:all`, `cursor:text`).
+- ✅ quickref.html copy buttons — fixed root cause of silent failures
+  - Root cause: `copyText()` tried `navigator.clipboard.writeText()` first on HTTPS; when permission denied the `.catch()` fallback called `execCommand("copy")` **asynchronously** (user gesture expired → always fails silently).
+  - Fix: always try `execCommand("copy")` synchronously first (still inside click handler, user gesture live); only fall back to async Clipboard API if `execCommand` returns false.
+  - Added `user-select:all` to `.cred-val` and `.cmd-box` — text is always selectable even if button fails.
+
+**Commits on main:**
+- `977ede0` — fix: clipboard copy works on HTTP (execCommand sync fallback) [Session 6]
+
+---
+
 ### Session 6
 
 **Implemented:**

@@ -392,18 +392,18 @@ def _render_frontend(version: str) -> tuple[str, str]:
     body.v2 .trace-badge-label { color: var(--v2-muted); }
     .trace-link {
       display: flex; align-items: center; justify-content: space-between;
-      font-family: "Rubik", sans-serif; font-size: 0.72rem;
-      letter-spacing: 0.02em; color: var(--nx-blue);
+      font-family: monospace; font-size: 0.68rem;
+      word-break: break-all; letter-spacing: 0.02em; color: var(--nx-blue);
       text-decoration: none;
     }
     .trace-link:hover { text-decoration: underline; }
-    .trace-copy {
-      display: flex; align-items: center; justify-content: space-between;
-      font-family: "Rubik", sans-serif; font-size: 0.72rem;
-      letter-spacing: 0.02em; cursor: pointer;
+    .trace-id {
+      display: block; font-family: monospace; font-size: 0.68rem;
+      word-break: break-all; user-select: all; cursor: text;
+      letter-spacing: 0.02em;
     }
-    body.v1 .trace-copy { color: var(--v1-muted); }
-    body.v2 .trace-copy { color: var(--v2-muted); }
+    body.v1 .trace-id { color: var(--v1-muted); }
+    body.v2 .trace-id { color: var(--v2-muted); }
     .trace-arrow { opacity: 0.7; font-size: 0.78rem; }
 
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -654,40 +654,18 @@ def _render_frontend(version: str) -> tuple[str, str]:
       statusEl.className   = "activity-box " + (ok ? "ok" : "fail");
     }
 
-    function copyTrace(el) {
-      var val = el.title;
-      function doExec() {
-        var ta = document.createElement("textarea");
-        ta.value = val;
-        ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
-        document.body.appendChild(ta); ta.focus(); ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(val).catch(doExec);
-      } else {
-        doExec();
-      }
-    }
-
     function showTrace(id) {
       const badge   = document.getElementById("traceBadge");
       const content = document.getElementById("traceContent");
       if (!badge || !content) return;
-      const short = id.slice(0, 16) + "\u2026";
       if (jaegerUrl) {
         content.innerHTML =
           '<a class="trace-link" href="' + jaegerUrl + '/trace/' + id +
           '" target="_blank" rel="noreferrer">' +
-          '<span>' + short + '</span>' +
+          '<span>' + id + '</span>' +
           '<span class="trace-arrow">\u2192 Jaeger</span></a>';
       } else {
-        content.innerHTML =
-          '<div class="trace-copy" title="' + id + '" ' +
-          'onclick="copyTrace(this)">' +
-          '<span>' + short + '</span>' +
-          '<span class="trace-arrow">\u2398 Copy</span></div>';
+        content.innerHTML = '<code class="trace-id">' + id + '</code>';
       }
       badge.style.display = "block";
     }
