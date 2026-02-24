@@ -21,8 +21,12 @@ spec:
       - PruneLast=true
       # Allows first-sync on clusters where CRDs are installed asynchronously (e.g., Gatekeeper templates creating constraint CRDs).
       - SkipDryRunOnMissingResource=true
+      # Prevent ArgoCD from overwriting fields listed in ignoreDifferences during sync.
+      # Required so the PostSync discover-prometheus Job's patches to ConfigMap and ScaledObject survive subsequent syncs.
+      - RespectIgnoreDifferences=true
   # Allow cluster-specific Prometheus endpoints for the KEDA demo without forcing repo edits.
-  # The ConfigMap still exists in Git for a sensible default, but the serverAddress field can be patched per environment.
+  # The PostSync discover-prometheus Job auto-detects the endpoint and patches both resources.
+  # RespectIgnoreDifferences=true ensures those patches are not reverted on subsequent syncs.
   ignoreDifferences:
     - group: ""
       kind: ConfigMap
@@ -30,3 +34,9 @@ spec:
       namespace: demo-app
       jsonPointers:
         - /data/serverAddress
+    - group: keda.sh
+      kind: ScaledObject
+      name: checkout-api-v1-keda
+      namespace: demo-app
+      jsonPointers:
+        - /spec/triggers/0/metadata/serverAddress
