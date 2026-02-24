@@ -40,10 +40,3 @@ spec:
       namespace: demo-app
       jsonPointers:
         - /spec/triggers/0/metadata/serverAddress
-    # KEDA controls spec.replicas via HPA. Without this, selfHeal fights KEDA every sync.
-    - group: apps
-      kind: Deployment
-      namespace: demo-app
-      name: checkout-api-v1
-      jsonPointers:
-        - /spec/replicas

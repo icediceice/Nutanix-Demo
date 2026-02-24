@@ -598,7 +598,31 @@ Return to baseline when done.
 
 > Requires KEDA pre-installed (`platform/keda/` applied, or bootstrap with `--branch scenario/keda-checkout`).
 
-**Action**: Switch to `scenario/keda-checkout` in ArgoCD.
+**Action**: Switch to `scenario/keda-checkout` in ArgoCD, then add the `spec.replicas` ignore rule so ArgoCD doesn't fight KEDA:
+
+```bash
+kubectl -n argocd patch application rx-demo --type merge \
+  -p '{"spec":{"source":{"targetRevision":"scenario/keda-checkout"}}}'
+
+# Stop ArgoCD from reverting KEDA-managed replicas back to 0 on every selfHeal sync
+kubectl -n argocd patch application rx-demo --type json -p '[
+  {"op":"add","path":"/spec/ignoreDifferences/-","value":{
+    "group":"apps","kind":"Deployment","namespace":"demo-app",
+    "name":"checkout-api-v1","jsonPointers":["/spec/replicas"]
+  }}
+]'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+```
+
+> **When leaving keda-checkout** — remove the ignore rule so other scenarios show correct replica counts:
+> ```bash
+> # Get the current index of the spec.replicas ignoreDifference (usually index 2)
+> kubectl -n argocd get application rx-demo -o jsonpath='{.spec.ignoreDifferences}'
+> # Then remove it by index (adjust if needed)
+> kubectl -n argocd patch application rx-demo --type json \
+>   -p '[{"op":"remove","path":"/spec/ignoreDifferences/2"}]'
+> kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+> ```
 
 What happens:
 - ArgoCD syncs the `keda-checkout` overlay — deploys the KEDA `ScaledObject` for `checkout-api-v1`
