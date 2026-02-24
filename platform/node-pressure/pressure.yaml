@@ -5,6 +5,9 @@ metadata:
   namespace: demo-pressure
 spec:
   replicas: 6
+  # Nodes take 3-5 min to provision — disable the default 10-min progress deadline
+  # so ArgoCD doesn't mark this Deployment Degraded while waiting for autoscaling.
+  progressDeadlineSeconds: 1800
   selector:
     matchLabels:
       app: node-pressure

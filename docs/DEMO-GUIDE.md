@@ -640,22 +640,23 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 
 **Pre-step (once per cluster setup — management cluster kubeconfig required):**
 
-The MachineDeployment ships with `min=max=4` (pinned). You must raise the max so the autoscaler is allowed to provision additional nodes:
+The cluster ships with `min=max=4` (pinned). NKP uses ClusterClass topology, so the autoscaler
+annotations must be updated on the **Cluster** object — patching the MachineDeployment directly
+is reverted by the topology controller within seconds.
 
 ```bash
 # Run against the management cluster (auth/C01/nkp.conf)
 kubectl --kubeconfig auth/C01/nkp.conf \
   -n kommander-default-workspace \
-  annotate machinedeployment workload02-md-0-p72kw \
-  cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size=8 \
-  --overwrite
-```
+  patch cluster workload02 --type json \
+  -p '[{"op":"replace","path":"/spec/topology/workers/machineDeployments/0/metadata/annotations/cluster.x-k8s.io~1cluster-api-autoscaler-node-group-max-size","value":"8"}]'
 
-Verify the autoscaler picked it up:
-```bash
+# Verify it propagated to the MachineDeployment (allow ~5 s for topology reconcile)
 kubectl --kubeconfig auth/C01/nkp.conf \
-  -n kube-system get configmap cluster-autoscaler-status -o yaml 2>/dev/null | grep -A5 NodeGroups \
-  || echo "Autoscaler status not yet available"
+  -n kommander-default-workspace \
+  get machinedeployment workload02-md-0-p72kw \
+  -o jsonpath='{.metadata.annotations.cluster\.x-k8s\.io/cluster-api-autoscaler-node-group-max-size}'
+# Expected output: 8
 ```
 
 **Action**: Switch to `scenario/node-autoscale` in ArgoCD.

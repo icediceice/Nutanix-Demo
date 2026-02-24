@@ -35,12 +35,13 @@ pending, and decisions made. Update it at the end of every work block.
   - Quota: `limits.cpu: 40`, `limits.memory: 28Gi` (Istio sidecar adds ~2000m CPU + 1024Mi per pod)
 
 **Pre-requisite for node-autoscale (documented in Beat 18b):**
-MachineDeployment `workload02-md-0-p72kw` ships with `min=max=4` — must annotate `max=8` before running this scenario (on management cluster):
+NKP uses ClusterClass topology — the autoscaler max annotation must be patched on the **Cluster** object, not the MachineDeployment (the topology controller reverts direct MD patches immediately):
 ```
 kubectl --kubeconfig auth/C01/nkp.conf -n kommander-default-workspace \
-  annotate machinedeployment workload02-md-0-p72kw \
-  cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size=8 --overwrite
+  patch cluster workload02 --type json \
+  -p '[{"op":"replace","path":"/spec/topology/workers/machineDeployments/0/metadata/annotations/cluster.x-k8s.io~1cluster-api-autoscaler-node-group-max-size","value":"8"}]'
 ```
+Also: `progressDeadlineSeconds: 1800` added to pressure Deployment so ArgoCD doesn't mark it Degraded while nodes are provisioning (~3-5 min).
 
 ---
 
