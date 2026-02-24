@@ -534,6 +534,7 @@ Return to baseline when done.
 |------|-------|----------|-------|
 | 17 | Node failure resilience | `scenario/node-failure` | 4 min |
 | 18 | KEDA autoscaling (scale to zero) | `scenario/keda-checkout` | 4 min |
+| 18b | Node autoscaling (CAPI provisions new workers) | `scenario/node-autoscale` | 5 min |
 
 ---
 
@@ -631,6 +632,79 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 
 ---
 
+##### Beat 18b — Node autoscaling (CAPI provisions new workers)
+
+**Scenario**: `scenario/node-autoscale` | **~5 min**
+
+> Demonstrates Cluster Autoscaler + CAPI provisioning new worker nodes in response to unschedulable pods.
+
+**Pre-step (once per cluster setup — management cluster kubeconfig required):**
+
+The MachineDeployment ships with `min=max=4` (pinned). You must raise the max so the autoscaler is allowed to provision additional nodes:
+
+```bash
+# Run against the management cluster (auth/C01/nkp.conf)
+kubectl --kubeconfig auth/C01/nkp.conf \
+  -n kommander-default-workspace \
+  annotate machinedeployment workload02-md-0-p72kw \
+  cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size=8 \
+  --overwrite
+```
+
+Verify the autoscaler picked it up:
+```bash
+kubectl --kubeconfig auth/C01/nkp.conf \
+  -n kube-system get configmap cluster-autoscaler-status -o yaml 2>/dev/null | grep -A5 NodeGroups \
+  || echo "Autoscaler status not yet available"
+```
+
+**Action**: Switch to `scenario/node-autoscale` in ArgoCD.
+
+What happens:
+- ArgoCD creates the `demo-pressure` namespace and a 6-replica Deployment (`node-pressure`)
+- Each pod requests `2 CPUs` + `4 Gi` memory — no current worker can fit even one of these (workers are at ~85% CPU)
+- All 6 pods immediately enter **Pending** state
+- Cluster Autoscaler detects unschedulable pods and requests 2 new worker nodes from CAPI
+- New workers provision and join the cluster (~3–5 minutes on NKP)
+- Pending pods are scheduled and flip to **Running**
+
+Watch the Demo Wall:
+- **Node Autoscaler** card appears (hidden on all other scenarios)
+- Value shows `"N pods Pending — scaling up"` in amber while autoscaling
+- Sub-line tracks worker count as new nodes join: `Workers: 4 / 6 Ready`
+- Once all pods schedule: `"All 6 pods Running"` in green
+- **Node Health** card shows the rising node count in real time
+
+```bash
+# Watch pending pods on the workload cluster
+kubectl -n demo-pressure get pods -w
+
+# Watch new nodes join
+kubectl get nodes -w
+
+# See autoscaler decision log (management cluster)
+kubectl --kubeconfig auth/C01/nkp.conf \
+  -n kube-system logs -l app=cluster-autoscaler --tail=50 -f
+```
+
+**What you say**: _"I applied 6 pods that couldn't fit on any existing worker. The Cluster Autoscaler noticed
+the Pending state within 30 seconds and asked NKP's Cluster API to provision new worker nodes.
+No manual intervention — the platform figured out what it needed and provisioned it. When I delete
+the scenario, those nodes will scale back down automatically."_
+
+Return to baseline when done (the `demo-pressure` namespace and pods are pruned automatically):
+```bash
+kubectl -n argocd patch application rx-demo --type merge \
+  -p '{"spec":{"source":{"targetRevision":"scenario/baseline"}}}'
+kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard --overwrite
+```
+
+> **Note**: Scale-down of the extra worker nodes may take 10–15 minutes after the pressure pods are
+> removed (cluster autoscaler default scale-down delay). This is normal and can be highlighted as
+> a cost-optimisation story: _"The cluster right-sizes itself — it won't keep idle nodes warm."_
+
+---
+
 ### Closing
 
 #### Beat 19 — End session
@@ -650,8 +724,8 @@ This stops the load generator. The cluster is idle and safe to leave.
 | **Exec briefing** | 25 min | 1–6, 8, 10–11, 14, 19 | GitOps + incident story (skip deep observability) |
 | **Developer team** | 45 min | 1–14, 19 | Full observability deep dive incl. traces, mirroring, log correlation |
 | **Ops / Platform team** | 45 min | 1–6, 8, 10–11, 14–16, 19 | Core flow + guardrails & compliance (Track A) |
-| **Infra / SRE team** | 45 min | 1–6, 8, 10–11, 14, 17–19 | Core flow + resilience & autoscaling (Track B) |
-| **Full showcase** | 60 min | All beats (1–19) | Everything — both tracks |
+| **Infra / SRE team** | 50 min | 1–6, 8, 10–11, 14, 17–18b, 19 | Core flow + resilience & autoscaling (Track B) |
+| **Full showcase** | 65 min | All beats (1–18b, 19) | Everything — both tracks |
 
 ---
 
@@ -672,6 +746,7 @@ This stops the load generator. The cluster is idle and safe to leave.
 | `scenario/quota-pressure` | 20 pause-pods fill ~75% pod quota | Quota pressure — guardrails active | Beat 15 | `baseline` |
 | `scenario/policy-enforce` | Gatekeeper deny on required-labels | Policy enforcement — deny mode | Beat 16 | `baseline` |
 | `scenario/node-failure` | 2-replica HA + PDBs, baseline load | Node resilience — evict & reschedule | Beat 17 | `baseline` |
+| `scenario/node-autoscale` | 6 pressure pods (2 CPU each) exhaust workers | Node autoscaling — CAPI provisions new workers | Beat 18b | `baseline` |
 
 ---
 

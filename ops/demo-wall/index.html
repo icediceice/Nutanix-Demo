@@ -357,6 +357,14 @@
           <div class="card-sub" id="kedaSub">-</div>
         </div>
 
+        <!-- Node Autoscaler (visible only on scenario/node-autoscale) -->
+        <div class="card" id="nodeAutoscaleCard" style="display:none">
+          <div class="card-label">Node Autoscaler</div>
+          <div class="card-value" id="nodeAutoscaleValue">-</div>
+          <div class="bar-wrap"><div class="bar" id="nodeAutoscaleBar" style="background:var(--nx-green)"></div></div>
+          <div class="card-sub" id="nodeAutoscaleSub">-</div>
+        </div>
+
         <!-- Node Health (always visible) -->
         <div class="card" id="nodeCard">
           <div class="card-label">Node Health</div>
@@ -621,6 +629,41 @@
           if (ksEl) ksEl.textContent = `checkout-api: ${keda.currentReplicas} ready  ·  range ${keda.minReplicas}\u2013${keda.maxReplicas}`;
         } else {
           kedaCard.style.display = "none";
+        }
+      }
+
+      // ── Node Autoscaler ──
+      const as = data.autoscale || {};
+      const naCard = document.getElementById("nodeAutoscaleCard");
+      if (naCard) {
+        const isNodeAutoscale = ((data.cd || {}).branch === "scenario/node-autoscale");
+        naCard.style.display = isNodeAutoscale ? "" : "none";
+        if (isNodeAutoscale) {
+          const naVal = document.getElementById("nodeAutoscaleValue");
+          const naBar = document.getElementById("nodeAutoscaleBar");
+          const naSub = document.getElementById("nodeAutoscaleSub");
+          const pending = as.pressurePending || 0;
+          const running = as.pressureRunning || 0;
+          const wReady  = as.workersReady  || 0;
+          const wTotal  = as.workersTotal  || 0;
+          if (naVal) {
+            if (pending > 0) {
+              naVal.textContent = pending + " pod\u2060" + (pending !== 1 ? "s" : "") + " Pending \u2014 scaling up";
+              naVal.className = "card-value warn";
+            } else if (running > 0) {
+              naVal.textContent = "All " + running + " pods Running";
+              naVal.className = "card-value good";
+            } else {
+              naVal.textContent = "No pressure pods";
+              naVal.className = "card-value warn";
+            }
+          }
+          if (naBar) {
+            const pct = wTotal > 0 ? Math.round(wReady / wTotal * 100) : 0;
+            naBar.style.width = pct + "%";
+            naBar.style.background = pct === 100 ? "var(--nx-green)" : "var(--nx-warn, #f5a623)";
+          }
+          if (naSub) naSub.textContent = "Workers: " + wReady + " / " + wTotal + " Ready  \u00b7  pressure pods: " + running + " running, " + pending + " pending";
         }
       }
 

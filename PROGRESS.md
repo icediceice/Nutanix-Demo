@@ -18,6 +18,32 @@ pending, and decisions made. Update it at the end of every work block.
 
 ## Session log
 
+### Session 11
+
+**Implemented:**
+- ✅ `scenario/node-autoscale` branch — demonstrates CAPI/Cluster Autoscaler provisioning new worker nodes
+  - `platform/node-pressure/` — `demo-pressure` namespace (Istio disabled) + 6-replica Deployment using `pause:3.9` with `requests: cpu=2, memory=4Gi` per pod
+  - `platform/kustomization.yaml` — adds `node-pressure` to resources on this branch only
+  - `ops/demo-wall/server.py` — `get_autoscale_status()` returns worker node count (control-plane excluded) + pressure pod pending/running counts; added to `build_payload()` as `autoscale` key; SCENARIO_META entry added
+  - `ops/demo-wall/index.html` — `nodeAutoscaleCard` (hidden except on node-autoscale) with pending count, worker node bar, and full sub-line
+  - `docs/DEMO-GUIDE.md` — Beat 18b with pre-step (MachineDeployment annotation), watch commands, talking points, scale-down note; §3.5 times updated; §4 table row added
+  - `CLAUDE.md` — scenario table row added
+
+- ✅ KEDA scenario fully stabilised (keda-checkout branch fixes from same session):
+  - PostSync `discover-prometheus` Job auto-detects Prometheus endpoint and patches ConfigMap + ScaledObject; `sidecar.istio.io/inject: "false"` prevents Istio blocking job completion
+  - `application.yaml`: `RespectIgnoreDifferences=true`, `ignoreDifferences` for ConfigMap/ScaledObject serverAddress and Deployment spec.replicas
+  - Quota: `limits.cpu: 40`, `limits.memory: 28Gi` (Istio sidecar adds ~2000m CPU + 1024Mi per pod)
+
+**Pre-requisite for node-autoscale (documented in Beat 18b):**
+MachineDeployment `workload02-md-0-p72kw` ships with `min=max=4` — must annotate `max=8` before running this scenario (on management cluster):
+```
+kubectl --kubeconfig auth/C01/nkp.conf -n kommander-default-workspace \
+  annotate machinedeployment workload02-md-0-p72kw \
+  cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size=8 --overwrite
+```
+
+---
+
 ### Session 10
 
 **Implemented:**

@@ -5,6 +5,7 @@ resources:
   - rbac
   - quotas-limits
   - policy
+  - node-pressure
 patches:
   - path: istio-namespace-labels/demo-app-label.yaml
   - path: istio-namespace-labels/demo-ops-label.yaml

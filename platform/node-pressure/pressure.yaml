@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-pressure
+  namespace: demo-pressure
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: node-pressure
+  template:
+    metadata:
+      labels:
+        app: node-pressure
+        version: v1
+    spec:
+      # Tolerate no other taints — schedule only on workers
+      tolerations: []
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi

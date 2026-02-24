@@ -127,6 +127,15 @@ SCENARIO_META = {
             {"text": "NKP CAPI provisions a replacement node and rejoins the cluster", "tool": "Kommander"},
         ],
     },
+    "scenario/node-autoscale": {
+        "intent": "Node autoscaling — pressure pods exhaust workers, CAPI provisions new nodes",
+        "next": "baseline",
+        "watch": [
+            {"text": "Autoscaler card: pressure pods go Pending (no room on current workers)"},
+            {"text": "Node Health: worker count climbs as CAPI provisions replacement nodes", "tool": "Kommander"},
+            {"text": "Pending pods clear once new workers are Ready and pods are scheduled"},
+        ],
+    },
 }
 
 
@@ -913,6 +922,55 @@ def get_node_status():
     return {"total": total, "ready": ready_count, "status": status, "nodes": nodes}
 
 
+def get_autoscale_status():
+    """Return worker node count and pressure pod stats for the node-autoscale scenario."""
+    # Count worker-only nodes (exclude control-plane nodes)
+    data = k8s_get_json("/api/v1/nodes")
+    if "_error" in data:
+        workers_total = 0
+        workers_ready = 0
+    else:
+        workers_total = 0
+        workers_ready = 0
+        for item in (data.get("items") or []):
+            labels = (item.get("metadata") or {}).get("labels") or {}
+            if "node-role.kubernetes.io/control-plane" in labels:
+                continue
+            workers_total += 1
+            for cond in ((item.get("status") or {}).get("conditions") or []):
+                if cond.get("type") == "Ready" and cond.get("status") == "True":
+                    workers_ready += 1
+                    break
+
+    # Count pressure pods in demo-pressure namespace
+    pods_data = k8s_get_json("/api/v1/namespaces/demo-pressure/pods")
+    pending = 0
+    running = 0
+    if "_error" not in pods_data:
+        for item in (pods_data.get("items") or []):
+            phase = (item.get("status") or {}).get("phase", "")
+            if phase == "Running":
+                running += 1
+            elif phase == "Pending":
+                pending += 1
+
+    total_pressure = pending + running
+    if total_pressure == 0:
+        pod_status = "warn"
+    elif pending > 0:
+        pod_status = "warn"
+    else:
+        pod_status = "good"
+
+    return {
+        "workersTotal": workers_total,
+        "workersReady": workers_ready,
+        "pressurePending": pending,
+        "pressureRunning": running,
+        "podStatus": pod_status,
+    }
+
+
 def get_pod_placement():
     """Return pod-to-node placement for demo-app namespace, grouped by deployment key."""
     data = k8s_get_json("/api/v1/namespaces/demo-app/pods")
@@ -1001,6 +1059,7 @@ def build_payload():
     links = build_quick_links()
     keda = get_keda_status()
     quota = get_quota_status()
+    autoscale = get_autoscale_status()
     workloads = build_workloads()
     nodes = get_node_status()
     pods = get_pod_placement()
@@ -1041,6 +1100,7 @@ def build_payload():
         ],
         "keda": keda,
         "quota": quota,
+        "autoscale": autoscale,
         "workloads": workloads,
         "nodes": nodes,
         "pods": pods,

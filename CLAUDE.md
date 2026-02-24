@@ -80,6 +80,7 @@ kubectl -n argocd annotate application rx-demo argocd.argoproj.io/refresh=hard -
 | `scenario/quota-pressure` | quota-pressure | weight-0 | baseline |
 | `scenario/policy-enforce` | normal | weight-0 | baseline |
 | `scenario/node-failure` | node-failure (2-replica HA + PDBs) | weight-0 | baseline |
+| `scenario/node-autoscale` | node-pressure (6 × 2CPU pause pods) | weight-0 | baseline |
 
 Always end sessions on `scenario/load-off`.
 
