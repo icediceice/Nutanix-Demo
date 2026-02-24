@@ -20,8 +20,8 @@ metadata:
   namespace: demo-app
 spec:
   hard:
-    requests.cpu: "4"
+    requests.cpu: "6"
     requests.memory: 4Gi
-    limits.cpu: "20"
+    limits.cpu: "40"
     limits.memory: 16Gi
     pods: "40"
