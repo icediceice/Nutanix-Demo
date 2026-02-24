@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: discover-prometheus
+  namespace: demo-app
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      serviceAccountName: keda-setup
+      restartPolicy: OnFailure
+      containers:
+        - name: discover
+          image: docker.io/mesosphere/kubectl:v1.34.1-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+
+              try_ns() {
+                ns="$1"
+                if kubectl -n "$ns" get svc kube-prometheus-stack-prometheus \
+                    --ignore-not-found 2>/dev/null | grep -q kube-prometheus; then
+                  echo "http://kube-prometheus-stack-prometheus.${ns}.svc.cluster.local:9090"
+                fi
+              }
+
+              # NKP workload clusters label their workspace namespace — try that first.
+              WS_NS=$(kubectl get ns -l workspaces.kommander.mesosphere.io/workspace-name \
+                -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
+              PROM_ADDR=""
+              [ -n "$WS_NS" ] && PROM_ADDR=$(try_ns "$WS_NS" || true)
+
+              for ns in kommander-default-workspace kommander monitoring prometheus; do
+                [ -n "$PROM_ADDR" ] && break
+                PROM_ADDR=$(try_ns "$ns" || true)
+              done
+
+              # Heuristic: any service named *prometheus* exposing port 9090.
+              if [ -z "$PROM_ADDR" ]; then
+                ROW=$(kubectl get svc -A \
+                  -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{" "}{range .spec.ports[*]}{.port}{" "}{end}{"\n"}{end}' \
+                  2>/dev/null \
+                  | awk 'tolower($2) ~ /prometheus/ && /9090/ { print $1" "$2; exit }')
+                if [ -n "$ROW" ]; then
+                  NS=$(echo "$ROW" | awk '{print $1}')
+                  SVC=$(echo "$ROW" | awk '{print $2}')
+                  PROM_ADDR="http://${SVC}.${NS}.svc.cluster.local:9090"
+                fi
+              fi
+
+              if [ -z "$PROM_ADDR" ]; then
+                echo "ERROR: could not discover a Prometheus endpoint" >&2
+                exit 1
+              fi
+
+              echo "Discovered Prometheus: $PROM_ADDR"
+
+              kubectl -n demo-app patch configmap keda-prometheus \
+                --type merge -p "{\"data\":{\"serverAddress\":\"${PROM_ADDR}\"}}"
+
+              kubectl -n demo-app patch scaledobject checkout-api-v1-keda \
+                --type json \
+                -p "[{\"op\":\"replace\",\"path\":\"/spec/triggers/0/metadata/serverAddress\",\"value\":\"${PROM_ADDR}\"}]"
+
+              echo "Done."

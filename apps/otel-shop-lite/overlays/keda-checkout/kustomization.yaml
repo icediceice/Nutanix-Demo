@@ -6,6 +6,8 @@ resources:
   - ../../versions/v2
   - keda-prometheus-configmap.yaml
   - checkout-api-v1-scaledobject.yaml
+  - discover-prometheus-rbac.yaml
+  - discover-prometheus-job.yaml
 patches:
   - path: payment-mock-v2-fault.yaml
   - path: checkout-api-v1-replicas-zero.yaml
