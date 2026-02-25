@@ -30,7 +30,7 @@ kind: K8sDemoRequiredLabels
 metadata:
   name: demo-required-labels
 spec:
-  enforcementAction: dryrun
+  enforcementAction: deny
   match:
     namespaces:
       - demo-app
